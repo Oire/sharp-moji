@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
+using Oire.SharpMoji.DataTool.Emojibase;
 using Oire.SharpMoji.Tests.Emojibase;
 using Xunit;
 

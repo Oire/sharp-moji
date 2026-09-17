@@ -1,8 +1,8 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Oire.SharpMoji.Tests.Emojibase;
+namespace Oire.SharpMoji.DataTool.Emojibase;
 
 /// <summary>
 /// Locates and loads the raw Emojibase corpus used by the Phase 0 data-assumption tests.
@@ -12,7 +12,7 @@ namespace Oire.SharpMoji.Tests.Emojibase;
 /// library never fetches it. Run <c>scripts/fetch-emoji-corpus.ps1</c> to populate it. When it is
 /// absent the tests skip, so <c>dotnet test</c> still works offline.
 /// </remarks>
-internal static class EmojiCorpus {
+public static class EmojiCorpus {
     /// <summary>The 28 locales Emojibase publishes. Hebrew is not among them — see SPEC section 3.1.</summary>
     public static readonly ImmutableArray<string> Locales =
     [
@@ -45,6 +45,21 @@ internal static class EmojiCorpus {
 
     /// <summary>Reads one locale's raw JSON without deserializing it.</summary>
     public static string ReadRaw(string locale, string file = "data.json") => File.ReadAllText(PathTo(locale, file));
+
+    /// <summary>
+    /// Deserializes one locale's <c>messages.json</c>: the localized group, subgroup and skin-tone
+    /// names that emoji group indices point into.
+    /// </summary>
+    /// <remarks>
+    /// Easy to overlook, and the February 2026 draft did: a Ukrainian picker needs Ukrainian
+    /// category headings, and this file is the only place they exist (docs/SPEC.md section 3.5).
+    /// </remarks>
+    public static EmojibaseMessages LoadMessages(string locale) {
+        var json = File.ReadAllText(PathTo(locale, "messages.json"));
+
+        return JsonSerializer.Deserialize<EmojibaseMessages>(json, Options)
+            ?? throw new InvalidOperationException($"Messages for locale '{locale}' deserialized to null.");
+    }
 
     public static string PathTo(string locale, string file) =>
         Path.Combine(Root ?? throw new InvalidOperationException("Corpus not available."), locale, file);

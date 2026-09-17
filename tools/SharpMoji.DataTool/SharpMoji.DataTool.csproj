@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Build-time only. This project turns the Emojibase corpus into the packs SharpMoji embeds;
+       it is never published and never shipped. The library itself makes no network calls, and
+       nothing here is referenced at run time. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Oire.SharpMoji.DataTool</RootNamespace>
+    <AssemblyName>SharpMoji.DataTool</AssemblyName>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Phase 1 tests verify that generation is deterministic and that the packs match the corpus,
+         which means reaching PackGenerator. It returns the library's internal pack DTOs, so it
+         cannot itself be public. -->
+    <InternalsVisibleTo Include="SharpMoji.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/SharpMoji/SharpMoji.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.401" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

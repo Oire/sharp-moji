@@ -1,8 +1,8 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Oire.SharpMoji.Tests.Emojibase;
+namespace Oire.SharpMoji.DataTool.Emojibase;
 
 /// <summary>
 /// Reads Emojibase's <c>tone</c> field, which is a bare number for single-tone emoji and an array
@@ -13,7 +13,7 @@ namespace Oire.SharpMoji.Tests.Emojibase;
 /// unimplementable: a single-tone signature cannot express <c>"tone": [1, 2]</c>. See
 /// <c>docs/SPEC.md</c> sections 3.3 and 5.3.
 /// </remarks>
-internal sealed class SkinToneListConverter: JsonConverter<ImmutableArray<int>> {
+public sealed class SkinToneListConverter: JsonConverter<ImmutableArray<int>> {
     public override ImmutableArray<int> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
         if (reader.TokenType == JsonTokenType.Number) {
             return [reader.GetInt32()];
@@ -63,7 +63,7 @@ internal sealed class SkinToneListConverter: JsonConverter<ImmutableArray<int>> 
 /// Found during Phase 0. The specification originally recorded three polymorphic fields; this is
 /// a fourth.
 /// </remarks>
-internal sealed class EmoticonConverter: JsonConverter<ImmutableArray<string>?> {
+public sealed class EmoticonConverter: JsonConverter<ImmutableArray<string>?> {
     public override ImmutableArray<string>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
         if (reader.TokenType == JsonTokenType.Null) {
             return null;
@@ -115,7 +115,7 @@ internal sealed class EmoticonConverter: JsonConverter<ImmutableArray<string>?> 
 /// it means "this emoji has no text presentation" — not "its text presentation is the empty
 /// string". Writing restores <c>""</c>, so the round trip stays faithful to the source.
 /// </remarks>
-internal sealed class EmptyStringAsNullConverter: JsonConverter<string?> {
+public sealed class EmptyStringAsNullConverter: JsonConverter<string?> {
     /// <summary>
     /// Opts into being called for null values.
     /// </summary>

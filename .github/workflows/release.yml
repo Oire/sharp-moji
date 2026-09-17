@@ -1,4 +1,4 @@
-# Packs the NuGet packages on a version tag and publishes them to nuget.org.
+﻿# Packs the NuGet packages on a version tag and publishes them to nuget.org.
 #
 # GitVersion (see GitVersion.yml) is in ManualDeployment mode, so releases are cut by pushing a
 # `v*` tag, and the package version is resolved from that tag (v1.2.3 -> 1.2.3). This workflow
@@ -11,9 +11,9 @@
 #   2. publish     - downloads that same artifact, pushes it to nuget.org via Trusted Publishing
 #                    and cuts the GitHub release.
 #
-# SharpMoji ships TWO packages: Oire.SharpMoji (core, English only) and Oire.SharpMoji.Locales
-# (the other 28 languages). They are versioned and released together — the satellite embeds data
-# the core knows how to read, so a version skew between them is a bug waiting to happen.
+# SharpMoji ships one package, Oire.SharpMoji, carrying the code and all 28 languages. An earlier
+# design split the languages into a satellite package; it does not survive trimming, because
+# nothing statically references it and the assembly is deleted outright. See docs/SPEC.md 7.2.
 #
 # The `nuget` environment is still declared, and must stay: the nuget.org trusted-publishing
 # policy pins it, so the OIDC exchange only works from a job that enters it. It carries no
@@ -48,9 +48,7 @@ jobs:
     - name: Test
       run: dotnet test SharpMoji.slnx --no-build -c Release --verbosity normal
     - name: Pack
-      run: |
-        dotnet pack src/SharpMoji/SharpMoji.csproj --no-build -c Release -o artifacts
-        dotnet pack src/SharpMoji.Locales/SharpMoji.Locales.csproj --no-build -c Release -o artifacts
+      run: dotnet pack src/SharpMoji/SharpMoji.csproj --no-build -c Release -o artifacts
     - name: Show packed packages
       run: |
         $packages = Get-ChildItem artifacts/*.nupkg

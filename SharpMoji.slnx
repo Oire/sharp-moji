@@ -1,4 +1,4 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/solution items/">
     <File Path="CHANGELOG.md" />
     <File Path="CLAUDE.md" />
@@ -18,7 +18,9 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SharpMoji/SharpMoji.csproj" />
-    <Project Path="src/SharpMoji.Locales/SharpMoji.Locales.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/SharpMoji.DataTool/SharpMoji.DataTool.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SharpMoji.Tests/SharpMoji.Tests.csproj" />

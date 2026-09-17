@@ -1,4 +1,4 @@
-# SharpMoji
+﻿# SharpMoji
 
 A cross-platform .NET 10 library for emoji reference data: lookup, localized search,
 skin-tone variants and canonical ordering.
@@ -15,7 +15,7 @@ and a general-purpose emoji package for the .NET ecosystem.
 - Localized labels, tags and category names in 29 locales, Hebrew included
 - Correct skin-tone handling, including the 19 emoji that take **two** tone modifiers
 - Deterministic, diacritic-insensitive search with specified ranking
-- **No network access and no file I/O** — every locale is embedded, all 29 in 1.6 MB
+- **No network access and no file I/O** — all 28 languages embedded in one 1.4 MB package
 - Synchronous API: there is no I/O to await
 - Trimming- and NativeAOT-compatible, with source-generated JSON
 

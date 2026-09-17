@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 Guidance for Claude Code (claude.ai/code) when working in this repository.
 
@@ -45,15 +45,15 @@ The solution file is **`SharpMoji.slnx`** (XML format), not a `.sln`.
 
 | Project | Purpose |
 |---|---|
-| `src/SharpMoji` | The library. Bundles English data. |
-| `src/SharpMoji.Locales` | Satellite package with the other 28 locales. |
+| `src/SharpMoji` | The library and all 28 embedded languages. The only shipped package. |
+| `tools/SharpMoji.DataTool` | Build-time pack generator. Never shipped, never packable. |
 | `tests/SharpMoji.Tests` | xUnit + FluentAssertions. |
 | `samples/SharpMoji.Samples.Console` | Demo, and the trim/AOT smoke test. |
 
 ## Conventions
 
 - `net10.0` only. No multi-targeting, no .NET Standard.
-- Namespaces are `Oire.SharpMoji.*`. Assembly and package IDs are `Oire.SharpMoji[.Locales]`.
+- Namespaces are `Oire.SharpMoji.*`. The assembly and package ID are both `Oire.SharpMoji`.
 - `TreatWarningsAsErrors` is on for `src` and `samples`. Do not suppress a warning without a
   comment saying why.
 - Public models are `sealed record` with `init` accessors. No public setters, no `List<T>` on
@@ -68,23 +68,29 @@ The solution file is **`SharpMoji.slnx`** (XML format), not a `.sln`.
 ## Things that do not exist, deliberately
 
 There is no HTTP client, no download path, no cache directory, no storage abstraction and no
-integrity manifest. Every locale is embedded (1.6 MB for all 29). If a task seems to call for
+integrity manifest. Every language is embedded (1,360 KB for all 28). If a task seems to call for
 fetching data at run time, re-read SPEC section 7 first — the answer is almost certainly a
 build-time script in `scripts/` instead.
+
+There is also **no satellite locale package**, and reintroducing one would be a regression.
+Anything discovered by assembly name at run time is deleted by `PublishTrimmed` and NativeAOT,
+because nothing statically references it — silently, leaving English only. Phase 1 tried exactly
+that and measured the failure (SPEC section 7.2).
 
 ## Data regeneration
 
 ```powershell
-./scripts/update-emoji-data.ps1 -EmojibaseVersion 17.0.0   # refresh from Emojibase
-./scripts/generate-cldr-locale.ps1 -Locale he              # locales Emojibase lacks
+./scripts/fetch-emoji-corpus.ps1                # test fixtures, ~22 MB, gitignored
+./scripts/update-emoji-data.ps1                 # regenerate the packs and print a data diff
+./scripts/generate-cldr-locale.ps1 -Locale he   # locales Emojibase lacks (Phase 6)
 ```
 
-Both are build-time only and must not become runtime code. After regenerating, update
+All three are build-time only and must not become runtime code. After regenerating, update
 `SharpMojiData` and the pinning tests together, and write the CHANGELOG entry from the diff the
 script prints.
 
 ## Licensing
 
 Code is Apache-2.0. The embedded data is **not**: it is MIT (Emojibase) and Unicode-3.0 (CLDR).
-`NOTICE` must ship inside both NuGet packages. Do not add a dependency whose license would
+`NOTICE` must ship inside the NuGet package. Do not add a dependency whose license would
 complicate that.

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -35,7 +35,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/SharpMoji/SharpMoji.csproj" />
-    <ProjectReference Include="../../src/SharpMoji.Locales/SharpMoji.Locales.csproj" />
+    <!-- The data-assumption tests validate the Emojibase wire model, which lives in the build-time
+         data tool rather than in the shipped library. -->
+    <ProjectReference Include="../../tools/SharpMoji.DataTool/SharpMoji.DataTool.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-namespace Oire.SharpMoji.Tests.Emojibase;
+namespace Oire.SharpMoji.DataTool.Emojibase;
 
 /// <summary>
 /// A record in an Emojibase <c>data.json</c> file, modeled exactly as the upstream JSON is shaped.
@@ -19,7 +19,7 @@ namespace Oire.SharpMoji.Tests.Emojibase;
 /// <c>docs/SPEC.md</c> section 6 for the mapping.
 /// </para>
 /// </remarks>
-internal sealed record EmojibaseEmoji {
+public sealed record EmojibaseEmoji {
     [JsonPropertyName("label")]
     public required string Label { get; init; }
 
@@ -84,7 +84,7 @@ internal sealed record EmojibaseEmoji {
 /// <summary>
 /// A skin-tone variant nested inside <see cref="EmojibaseEmoji.Skins"/>.
 /// </summary>
-internal sealed record EmojibaseSkin {
+public sealed record EmojibaseSkin {
     [JsonPropertyName("label")]
     public required string Label { get; init; }
 

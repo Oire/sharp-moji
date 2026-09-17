@@ -185,10 +185,10 @@ Oire.SharpMoji/
 │   └── SearchIndex.cs           # prebuilt, immutable
 │
 ├── Data/
-│   ├── EmbeddedPackReader.cs    # Brotli + source-gen JSON, lazy per locale
-│   ├── StructureTable.cs        # shared across all locales (§3.7)
-│   ├── StringTable.cs           # one per locale
-│   └── SharpMojiData.cs         # EmojibaseVersion, UnicodeVersion constants
+│   ├── EmojiPack.cs             # the embedded format: StructurePack + StringPack
+│   ├── EmojiPackJsonContext.cs  # source-generated
+│   ├── EmojiPackSerializer.cs   # Brotli + JSON
+│   └── EmbeddedPackReader.cs    # resource lookup, lazy per locale
 │
 ├── Serialization/
 │   ├── EmojiJsonContext.cs      # source-generated
@@ -408,19 +408,27 @@ no online mode. Consequences worth stating plainly:
 Each locale is a separate Brotli-compressed embedded resource, decompressed on first use and
 cached. An app that only ever touches English pays for English.
 
-### 7.2 Package layout
+### 7.2 Package layout — one package
 
-Most consumers want one language. The bundle is split so they do not pay for 28:
+**`Oire.SharpMoji` is the only package.** It carries the code, the shared structure table and all
+28 language tables: **1,360 KB** of embedded data, measured.
 
-| Package | Contents | Size |
-|---|---|---|
-| `Oire.SharpMoji` | Code, shared structure table, `en` strings | ~95 KB data |
-| `Oire.SharpMoji.Locales` | The other 28 locale string tables | ~1.45 MB data |
+This section previously specified a two-package split — a small core with English, plus an
+optional `Oire.SharpMoji.Locales` satellite discovered at run time — to spare English-only
+consumers 1.3 MB. **That design does not work**, and Phase 1 proved it by publishing the sample:
 
-The core package alone is fully functional in English. If the satellite package is present it
-is discovered by assembly scan and `EmojiLocale.All` widens automatically; if absent,
-`Load("uk")` throws `LocaleNotAvailableException` naming the package to install. One satellite
-rather than 28 per-locale packages — 28 would be a publishing chore for no real benefit.
+- Nothing statically references a satellite discovered by name, so both `PublishTrimmed` and
+  NativeAOT **delete the assembly outright**. The AOT smoke test reported 1 locale instead of 28.
+- The failure is silent. There is no error, no missing-assembly exception — the languages are
+  simply gone, which is the worst way for this to fail.
+- Trimming support is a ship gate (§9.4), so "works unless trimmed" is not an option.
+
+A satellite could be kept alive by shipping a `.targets` file that adds itself as a
+`TrimmerRootAssembly`, but that trades a silent failure mode for a fragile one, plus two packages
+to version in lockstep. Against 1.3 MB on a desktop library, the trade is not worth making.
+
+One package also simplifies the API: `EmojiLocale.All` is a fixed set, there is no
+"install the other package" error path, and no version skew is possible.
 
 ### 7.3 The upgrade mechanism
 
@@ -547,7 +555,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | # | Phase | Content | Exit criteria |
 |---|---|---|---|
 | 0 | ~~Spike~~ **Done** | Deserialize all 28 locales; prove the converters (§3.3) | ✅ 95 tests, every locale round-trips losslessly |
-| 1 | Build pipeline | Structure/string split, Brotli resources, `update-emoji-data` script | Bundle ≤ 1.6 MB; regeneration is reproducible |
+| 1 | ~~Build pipeline~~ **Done** | Structure/string split, Brotli resources, `update-emoji-data` script | ✅ Bundle 1,360 KB; regeneration byte-reproducible |
 | 2 | Model + catalog | Records, source-gen context, indexes, normalization | `emoji-test.txt` conformance passes |
 | 3 | Skin tones | 1- and 2-slot lookup by indexing published variants | All 19 dual-tone emoji resolve all 25 variants |
 | 4 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
@@ -613,12 +621,13 @@ quality, and download counts are mostly CI. Replaced with:
 - `emoji-test.txt` conformance: 100%, all 29 locales load.
 - Search golden corpus passes for `en`, `fr`, `uk`, `ru`.
 - Trimmed and NativeAOT samples run on Windows, macOS, Linux.
-- Core package data payload under 150 KB; full bundle under 1.6 MB.
+- Embedded data under 1.6 MB (currently 1,360 KB).
 - Zero analyzer warnings with `TreatWarningsAsErrors`.
 - Public API reviewed and frozen via `PublicApiAnalyzers`.
 
 **Post-release**
 - Sourire depends on the published package with no `InternalsVisibleTo` and no forked code.
+- A trimmed or NativeAOT consumer gets all 28 languages, not a silently reduced subset.
 - A Unicode 18 refresh is one script run, a diff review and a minor bump — no model changes.
   This is the specific thing §7.3 exists to guarantee.
 - No correctness issue in the first release requiring a data reshape.
