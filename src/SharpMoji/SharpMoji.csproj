@@ -16,6 +16,7 @@
     <IsTrimmable>true</IsTrimmable>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageId>Oire.SharpMoji</PackageId>
     <Authors>André Polykanine; Oire</Authors>
     <Company>Oire Software</Company>
@@ -50,6 +51,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../icon.png" Pack="true" PackagePath="\" />
     <!-- The package embeds CLDR-derived emoji data, so the third-party attributions must travel with
          it. See docs/SPEC.md section 11. -->
     <None Include="../../NOTICE" Pack="true" PackagePath="\" />

@@ -13,6 +13,7 @@
     <IsTrimmable>true</IsTrimmable>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageId>Oire.SharpMoji.Locales</PackageId>
     <Authors>André Polykanine; Oire</Authors>
     <Company>Oire Software</Company>
@@ -38,6 +39,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../icon.png" Pack="true" PackagePath="\" />
     <None Include="../../NOTICE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
