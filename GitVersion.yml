@@ -1,0 +1,11 @@
+mode: ManualDeployment
+tag-prefix: '[vV]'
+assembly-versioning-format: '{Major}.{Minor}.{Patch}.{VersionSourceDistance}'
+assembly-file-versioning-format: '{Major}.{Minor}.{Patch}.{VersionSourceDistance}'
+assembly-informational-format: '{Major}.{Minor}.{Patch}.{VersionSourceDistance}'
+branches:
+  # GitVersion's built-in `main` configuration matches both `main` and `master` (its regex is
+  # ^master$|^main$), so this applies to this repository's `master` branch. Declaring a `master`
+  # key instead would be a new branch configuration and would need its own `regex`.
+  main:
+    increment: None

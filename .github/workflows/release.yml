@@ -1,0 +1,121 @@
+# Packs the NuGet packages on a version tag and publishes them to nuget.org.
+#
+# GitVersion (see GitVersion.yml) is in ManualDeployment mode, so releases are cut by pushing a
+# `v*` tag, and the package version is resolved from that tag (v1.2.3 -> 1.2.3). This workflow
+# only runs for those tags.
+#
+# It runs in two stages, both automatic - pushing the tag is the only human action:
+#   1. build-test  - builds, tests and packs, then prints the exact .nupkg names (with their
+#                    GitVersion-resolved versions) to the run summary and uploads them as an
+#                    artifact.
+#   2. publish     - downloads that same artifact, pushes it to nuget.org via Trusted Publishing
+#                    and cuts the GitHub release.
+#
+# SharpMoji ships TWO packages: Oire.SharpMoji (core, English only) and Oire.SharpMoji.Locales
+# (the other 28 languages). They are versioned and released together — the satellite embeds data
+# the core knows how to read, so a version skew between them is a bug waiting to happen.
+#
+# The `nuget` environment is still declared, and must stay: the nuget.org trusted-publishing
+# policy pins it, so the OIDC exchange only works from a job that enters it. It carries no
+# required reviewers, so it doesn't pause the run; its remaining protection is the environment's
+# "Deployment branches and tags" rule, which restricts it to `v*` tags.
+#
+# nuget.org versions are immutable: once this workflow pushes, that version is permanent.
+# The tag is the point of no return.
+
+name: Release
+
+on:
+  push:
+    tags: [ "v*" ]
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+    - name: Restore dependencies
+      run: dotnet restore SharpMoji.slnx
+    - name: Build
+      run: dotnet build SharpMoji.slnx --no-restore -c Release
+    - name: Test
+      run: dotnet test SharpMoji.slnx --no-build -c Release --verbosity normal
+    - name: Pack
+      run: |
+        dotnet pack src/SharpMoji/SharpMoji.csproj --no-build -c Release -o artifacts
+        dotnet pack src/SharpMoji.Locales/SharpMoji.Locales.csproj --no-build -c Release -o artifacts
+    - name: Show packed packages
+      run: |
+        $packages = Get-ChildItem artifacts/*.nupkg
+        "### 📦 Packed packages" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+        foreach ($p in $packages) {
+          $size = '{0:N1} KB' -f ($p.Length / 1KB)
+          "- **$($p.Name)**  ($size)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          Write-Host "Packed: $($p.Name) ($size)"
+        }
+    - name: Upload packages
+      uses: actions/upload-artifact@v7
+      with:
+        name: nuget-packages
+        path: |
+          artifacts/*.nupkg
+          artifacts/*.snupkg
+        if-no-files-found: error
+
+  publish:
+    needs: build-test
+    runs-on: windows-latest
+    environment: nuget
+    permissions:
+      contents: write   # create the GitHub release
+      id-token: write   # request the OIDC token for NuGet Trusted Publishing
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+    - name: Download packages
+      uses: actions/download-artifact@v8
+      with:
+        name: nuget-packages
+        path: artifacts
+    # Trusted Publishing: exchange the GitHub OIDC token for a short-lived (1 hour, single-use)
+    # nuget.org API key. Requires a matching trusted-publishing policy on nuget.org bound to this
+    # repo, the `release.yml` workflow file and the `nuget` environment (hence the `environment:`
+    # key above - dropping it would break the OIDC exchange). No stored API key.
+    - name: NuGet login (OIDC to temporary API key)
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+    - name: Publish to NuGet
+      run: |
+        # Resolve the real paths: PowerShell does not expand globs for native commands, and
+        # `dotnet nuget push` treats "artifacts/*.nupkg" literally. Pushing each .nupkg also pushes
+        # the co-located .snupkg symbols package to nuget.org automatically.
+        $packages = Get-ChildItem artifacts/*.nupkg | ForEach-Object { $_.FullName }
+        foreach ($pkg in $packages) {
+          Write-Host "Pushing $pkg"
+          dotnet nuget push $pkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        }
+    - name: Create GitHub release
+      run: |
+        $tag = $env:GITHUB_REF_NAME
+        # Release title reads "Version 1.0.3" (strip the leading v/V from the tag), while the release
+        # itself is still created against the raw tag ref.
+        $title = "Version " + ($tag -replace '^[vV]', '')
+        $assets = Get-ChildItem artifacts/*.nupkg, artifacts/*.snupkg -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+        # Build one flat argument array and let PowerShell expand it into separate args for the native
+        # command. Do NOT use `@` splatting on a native command: it splits a single string path into
+        # its characters (a .nupkg path became "D", ":", "\", ... and gh choked on "D").
+        $ghArgs = @($tag) + $assets + @('--verify-tag', '--generate-notes', '--title', $title)
+        # Tags carrying a pre-release suffix (e.g. v1.2.3-beta.1) are marked as pre-releases on GitHub.
+        if ($tag -match '-') { $ghArgs += '--prerelease' }
+        gh release create $ghArgs

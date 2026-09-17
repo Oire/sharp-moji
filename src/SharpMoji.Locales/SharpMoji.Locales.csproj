@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Oire.SharpMoji.Locales</RootNamespace>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageId>Oire.SharpMoji.Locales</PackageId>
+    <Authors>André Polykanine; Oire</Authors>
+    <Company>Oire Software</Company>
+    <Product>SharpMoji</Product>
+    <Description>Additional locale data for SharpMoji: emoji labels and tags in 28 languages beyond the English bundled in the core package. Install alongside Oire.SharpMoji to widen EmojiLocale.All.</Description>
+    <Copyright>Copyright © 2026 André Polykanine, Oire Software</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/Oire/sharp-moji</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Oire/sharp-moji</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>emoji;unicode;emojibase;cldr;localization;i18n;language-pack</PackageTags>
+    <PackageReleaseNotes>https://github.com/Oire/sharp-moji/blob/master/CHANGELOG.md</PackageReleaseNotes>
+
+    <Deterministic>true</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <EnableSourceLink Condition="'$(GITHUB_ACTIONS)' != 'true'">false</EnableSourceLink>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../NOTICE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../SharpMoji/SharpMoji.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" Version="5.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="GitVersion.MsBuild" Version="6.8.2">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.401" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

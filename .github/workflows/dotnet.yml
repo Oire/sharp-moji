@@ -1,0 +1,70 @@
+# Builds and tests SharpMoji on all three supported platforms.
+#
+# The library has no external service dependencies — all emoji data is embedded — so unlike
+# sharp-sync there is nothing to stand up before the tests run. Trimming and NativeAOT
+# publishing are part of the package contract (docs/SPEC.md section 9.4), so the sample is
+# published both ways and executed.
+
+name: .NET
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        # GitVersion computes the version from tags and history, and fails on a shallow clone
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore SharpMoji.slnx
+
+    - name: Check format
+      run: dotnet format SharpMoji.slnx --verify-no-changes
+
+    - name: Build
+      run: dotnet build SharpMoji.slnx --no-restore
+
+    - name: Test
+      run: dotnet test SharpMoji.slnx --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+    # Trim and AOT publishing are ship gates, not nice-to-haves: the library promises to work in
+    # a trimmed desktop app. A reflection-based serializer call would break these steps, which is
+    # the point of running them on every push.
+    - name: Publish trimmed
+      run: dotnet publish samples/SharpMoji.Samples.Console -c Release -p:PublishTrimmed=true
+
+    - name: Publish NativeAOT
+      run: dotnet publish samples/SharpMoji.Samples.Console -c Release -p:PublishAot=true
+
+    - name: Run the AOT sample
+      shell: bash
+      run: |
+        exe=$(find samples/SharpMoji.Samples.Console/bin/Release -name 'SharpMoji.Samples.Console' -o -name 'SharpMoji.Samples.Console.exe' | grep -v '\.dll$' | head -1)
+        echo "Running $exe"
+        "$exe"
+
+    - name: Upload coverage reports to Codecov
+      if: matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v7
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Oire/sharp-moji

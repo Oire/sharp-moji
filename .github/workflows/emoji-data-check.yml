@@ -1,0 +1,80 @@
+# Watches for new Emojibase releases.
+#
+# SharpMoji embeds its emoji data, so a Unicode update reaches users only as a new package
+# version (docs/SPEC.md section 7.3). Without this, a Unicode release would be discovered by a
+# user filing an issue about a missing emoji. This job checks weekly and opens an issue when the
+# pinned version falls behind.
+#
+# It never edits data or opens a PR: regeneration is a deliberate act that must be followed by
+# reviewing the data diff and writing a CHANGELOG entry.
+
+name: Emoji data check
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Mondays, 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Compare pinned version against latest Emojibase release
+      id: check
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        pinned=$(grep -oP 'EmojibaseVersion\s*=\s*"\K[^"]+' src/SharpMoji/SharpMojiData.cs)
+        latest=$(curl -fsSL https://registry.npmjs.org/emojibase-data/latest | jq -r .version)
+
+        echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+        echo "latest=$latest" >> "$GITHUB_OUTPUT"
+        echo "Pinned: $pinned   Latest: $latest"
+
+        if [ "$pinned" = "$latest" ]; then
+          echo "outdated=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "outdated=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Open an issue if the data is behind
+      if: steps.check.outputs.outdated == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PINNED: ${{ steps.check.outputs.pinned }}
+        LATEST: ${{ steps.check.outputs.latest }}
+      run: |
+        set -euo pipefail
+        title="Emoji data is behind: emojibase-data $LATEST is available (pinned $PINNED)"
+
+        # Don't pile up a duplicate issue every Monday.
+        if gh issue list --state open --search "$title in:title" --json number --jq 'length' | grep -qv '^0$'; then
+          echo "An open issue already tracks this."
+          exit 0
+        fi
+
+        gh issue create --title "$title" --label "data" --body "$(cat <<EOF
+        \`emojibase-data\` **$LATEST** has been published; SharpMoji currently embeds **$PINNED**.
+
+        To update (see [docs/SPEC.md](../blob/master/docs/SPEC.md) section 7.3):
+
+        1. \`./scripts/update-emoji-data.ps1 -EmojibaseVersion $LATEST\`
+        2. Review the data diff the script prints — added, removed, relabeled and retagged emoji.
+        3. Regenerate the CLDR-derived locales: \`./scripts/generate-cldr-locale.ps1 -Locale he\`
+        4. Update \`SharpMojiData\` and the pinning tests together.
+        5. Write the CHANGELOG entry from the diff. New emoji are additive, so this is a **minor** bump.
+
+        Check whether the release adds emoji taking two skin-tone modifiers, or changes group
+        structure — both need a look at the affected tests rather than a straight regeneration.
+        EOF
+        )"
