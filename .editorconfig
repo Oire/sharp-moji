@@ -1,5 +1,8 @@
 [*]
-end_of_line = crlf
+# LF everywhere. This is a cross-platform library built on Linux and macOS as well as Windows,
+# and LF is what git, GitHub and the .NET toolchain treat as the default. .gitattributes pins the
+# same choice at checkout time, so it does not depend on each clone's git configuration.
+end_of_line = lf
 indent_style = space
 indent_size = 4
 insert_final_newline = true

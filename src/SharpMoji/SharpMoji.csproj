@@ -82,7 +82,7 @@
     <InternalsVisibleTo Include="SharpMoji.Tests" />
     <!-- The data tool writes the embedded pack format the library owns, so it needs the same
          internal DTOs and serializer. Build-time only; it ships nothing. -->
-    <InternalsVisibleTo Include="SharpMoji.DataTool" />
+    <InternalsVisibleTo Include="SharpMoji.DataTool" />
     <!-- Temporary, until Phase 2 gives the sample a public catalog API to call. The sample is the
          trim and NativeAOT smoke test, and it can only prove the packs load if it can load one. -->
     <InternalsVisibleTo Include="SharpMoji.Samples.Console" />
