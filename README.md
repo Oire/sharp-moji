@@ -12,10 +12,11 @@ and a general-purpose emoji package for the .NET ecosystem.
 ## Planned capabilities
 
 - Emoji lookup by sequence, hexcode, shortcode or emoticon, tolerant of variation selectors
-- Localized labels, tags and category names in 29 locales
+- Localized labels, tags and category names in 29 locales, Hebrew included
 - Correct skin-tone handling, including the 19 emoji that take **two** tone modifiers
 - Deterministic, diacritic-insensitive search with specified ranking
-- Offline by default — bundled English data, with opt-in locale pack downloads
+- **No network access and no file I/O** — every locale is embedded, all 29 in 1.6 MB
+- Synchronous API: there is no I/O to await
 - Trimming- and NativeAOT-compatible, with source-generated JSON
 
 ## Documentation

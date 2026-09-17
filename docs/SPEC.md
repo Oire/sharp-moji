@@ -36,6 +36,8 @@ abstractions, and exception hierarchy survive largely intact.
 | Package ID | `Oire.SharpMoji` |
 | License (code) | Apache-2.0 (see §11) |
 | Runtime deps | `Microsoft.Extensions.Logging.Abstractions` only |
+| Network | **None.** All data is embedded; the library makes no HTTP calls and does no file I/O |
+| Platforms | Windows, macOS, Linux (Sourire is Windows-only; the library is not) |
 | Analyzers | `Microsoft.CodeAnalysis.NetAnalyzers`, `Roslynator.Analyzers`, `Microsoft.CodeAnalysis.PublicApiAnalyzers` |
 | Versioning | `GitVersion.MsBuild`, ManualDeployment, `v*` tags — as in SharpSync |
 
@@ -59,9 +61,13 @@ Everything below was confirmed against `emojibase-data@17.0.0`, not assumed.
 bn da de en en-gb es es-mx et fi fr hi hu it ja ko lt ms nb nl pl pt ru sv th uk vi zh zh-hant
 ```
 
-**Hebrew (`he`) does not exist in Emojibase.** The original goal of "7 languages including
-Hebrew with RTL support" is not achievable from this data source. Six of the seven
-(`en fr uk ru de es`) ship as normal locale packs; Hebrew is deferred (§13).
+**Hebrew (`he`) does not exist in Emojibase** — but it does exist upstream in CLDR, which is
+where Emojibase gets its strings. `common/annotations/he.xml` carries 1975 base labels and
+`common/annotationsDerived/he.xml` a further 2386 for skin-tone variants: complete coverage.
+
+Hebrew is therefore generated at build time from CLDR directly (§7.4) and ships as a normal
+embedded locale alongside the other 28. The same generator works for any CLDR locale
+Emojibase does not publish, so this is a reusable capability rather than a Hebrew special case.
 
 RTL is a *rendering* concern and is the consuming app's responsibility. The library stays
 direction-agnostic: it returns strings and never composes display text. It does expose
@@ -116,6 +122,31 @@ All sequence-keyed indexes are built on a **normalized key**: VS16 stripped. Loo
 normalize the input the same way. `Emoji.Sequence` still returns the fully-qualified form
 as published.
 
+### 3.7 Structure is locale-independent — measured
+
+Verified across all 28 locales: every locale has exactly **1949** records, in the same order,
+with byte-identical `hexcode`, `emoji`, `text`, `type`, `order`, `group`, `subgroup`,
+`version`, `gender`, `emoticon` and skin structure. **Zero** structural differences.
+
+Only `label` and `tags` are localized.
+
+This is the single most useful fact about the data, because it means the shipped form need
+not be 28 copies of a full dataset. It is one shared structure table plus 28 small string
+tables:
+
+| | raw | gzipped |
+|---|---|---|
+| Shared structure (all locales) | 418 KB | **41 KB** |
+| One locale's strings (`en`) | 301 KB | 53 KB |
+| One locale's strings (`uk`, Cyrillic) | 508 KB | 67 KB |
+| All 28 locale string tables | 9.6 MB | **1.48 MB** |
+| **Complete bundle, 28 locales** | | **1.52 MB gzip / ~1.25 MB Brotli** |
+| Plus generated Hebrew (§7.5), 29 total | | ~1.58 MB gzip / ~1.30 MB Brotli |
+
+Against 26.5 MB for the naive approach of embedding 28 full `data.json` files. This is what
+makes shipping every locale in the box practical, and it is why there is no download
+subsystem (§7).
+
 ---
 
 ## 4. Architecture
@@ -143,21 +174,24 @@ Oire.SharpMoji/
 │   ├── RankedMatcher.cs         # default, deterministic ranking
 │   └── SearchIndex.cs           # prebuilt, immutable
 │
-├── Packs/
-│   ├── ILocalePackStore.cs      # read/write locale packs
-│   ├── FileSystemPackStore.cs   # default
-│   ├── InMemoryPackStore.cs     # sandboxed platforms, tests
-│   ├── ILocalePackSource.cs     # where packs come from
-│   ├── HttpPackSource.cs        # opt-in CDN download
-│   └── BundledPackSource.cs     # embedded en, always available
+├── Data/
+│   ├── EmbeddedPackReader.cs    # Brotli + source-gen JSON, lazy per locale
+│   ├── StructureTable.cs        # shared across all locales (§3.7)
+│   ├── StringTable.cs           # one per locale
+│   └── SharpMojiData.cs         # EmojibaseVersion, UnicodeVersion constants
 │
 ├── Serialization/
 │   ├── EmojiJsonContext.cs      # source-generated
 │   ├── ToneConverter.cs         # int | int[]
 │   └── VersionConverter.cs      # int | float
 │
-└── Exceptions/                  # SharpMojiException + 4 subtypes
+└── Exceptions/                  # SharpMojiException + 2 subtypes
 ```
+
+There is no `Packs/` namespace, no storage abstraction, no HTTP client and no integrity
+manifest. Embedding every locale (§3.7) removes that entire subsystem along with its
+failure modes: no network errors, no partial writes, no cache invalidation, no
+platform-specific paths, no offline degradation.
 
 ### 4.1 Why per-locale catalogs
 
@@ -177,26 +211,27 @@ another catalog object. Consequences:
 ### 5.1 Entry points
 
 ```csharp
-// Bundled English. No file I/O, no network. The zero-config path.
-IEmojiCatalog catalog = await EmojiCatalogFactory.CreateBundledAsync(ct);
+// English. Cached; first access decompresses ~95 KB and parses.
+IEmojiCatalog catalog = EmojiCatalog.English;
 
-// Full control.
-var options = new SharpMojiOptions
-{
-    PackStore  = new FileSystemPackStore(),      // or InMemoryPackStore
-    PackSource = new HttpPackSource(httpClient), // opt-in; null = bundled only
-    Shortcodes = ShortcodePreset.Cldr,
-    Logger     = logger,
-};
-var factory = new EmojiCatalogFactory(options);
+// Any other locale — also embedded, decompressed lazily on first use and then cached.
+IEmojiCatalog uk = EmojiCatalog.Load("uk");
+IEmojiCatalog he = EmojiCatalog.Load(EmojiLocale.Hebrew);
+bool ok = EmojiCatalog.TryLoad(someUserString, out IEmojiCatalog? c);
 
-IEmojiCatalog uk = await factory.GetAsync("uk", ct);
-bool installed  = factory.IsInstalled("uk");
-IReadOnlyList<EmojiLocale> available = EmojiLocale.All;   // the 29 real locales
+IReadOnlyList<EmojiLocale> available = EmojiLocale.All;   // all 29, always present
+
+// Escape hatch: load a pack you generated yourself (§7.5).
+IEmojiCatalog custom = EmojiCatalog.LoadFrom(stream);
 ```
 
-Construction is single-phase: there is no `new` followed by `InitializeAsync`. A catalog
-handed to you is loaded.
+**The API is synchronous, deliberately.** With every locale embedded there is no I/O to
+await — loading is a Brotli decompress plus a parse, single-digit milliseconds. Exposing
+`Task`-returning methods here would be async-over-sync, which is worse than useless: it
+costs a state machine and invites callers to believe there is latency to hide. A future
+version that genuinely needs I/O can add async overloads without breaking anyone.
+
+Construction is single-phase. A catalog handed to you is loaded.
 
 ### 5.2 Lookup and enumeration
 
@@ -271,11 +306,10 @@ a breaking change.
 
 ### 5.5 Conventions
 
-- Every async method takes a `CancellationToken`. No exceptions.
 - No method returns `List<T>`; collections are `IReadOnlyList<T>` or `ImmutableArray<T>`.
 - Models are `sealed record` with `init` accessors. No public setters anywhere.
 - Lookups that can miss are `Find…` returning `T?` or `TryGet…`. They do not throw.
-- `HttpClient` is always supplied by the caller. The library never constructs or disposes one.
+- Any async method added later takes a `CancellationToken`. None exist in v1.0.
 
 ---
 
@@ -325,45 +359,87 @@ Side-by-side with the draft, for the record:
 
 ---
 
-## 7. Packs, storage and network
+## 7. Data packaging and upgrades
 
-### 7.1 Defaults are offline
+### 7.1 Everything is embedded
 
-Out of the box SharpMoji does no file I/O and no network access: bundled `en` is an embedded,
-Brotli-compressed resource (`data.json` ~775 KB raw, ~97 KB compressed, plus
-`messages.json` and `shortcodes/cldr.json`). Downloading is **opt-in** by supplying an
-`HttpPackSource`. A library that silently phones a CDN on first use is not something an
-accessibility app should inherit by default.
+Because the complete 28-locale bundle is 1.52 MB gzipped (§3.7), all data ships in the
+package. There is no download path, no cache directory and no offline mode, because there is
+no online mode. Consequences worth stating plainly:
 
-### 7.2 Pinned and verified
+- Nothing to go wrong at runtime: no network errors, no CDN outage, no corrupted cache, no
+  first-run latency, no permissions problems.
+- No privacy surface. The library cannot phone home because it has no code that could.
+- Reproducible by construction — the data is a build input, not a runtime variable.
+- Works in any sandbox, offline installs and air-gapped environments included.
 
-The CDN URL pins an exact version — never `@latest`, which makes builds non-reproducible and
-silently changes data under users:
+Each locale is a separate Brotli-compressed embedded resource, decompressed on first use and
+cached. An app that only ever touches English pays for English.
 
-```
-https://cdn.jsdelivr.net/npm/emojibase-data@17.0.0/{locale}/data.json
-```
+### 7.2 Package layout
 
-The library ships a manifest of **SHA-256 hashes** for every pinned file (jsDelivr publishes
-these). Downloads are verified against it before being written to the store; a mismatch
-throws `PackIntegrityException` and nothing is persisted. A CDN compromise would otherwise
-feed arbitrary text straight into a UI.
+Most consumers want one language. The bundle is split so they do not pay for 28:
 
-### 7.3 Storage
+| Package | Contents | Size |
+|---|---|---|
+| `Oire.SharpMoji` | Code, shared structure table, `en` strings | ~95 KB data |
+| `Oire.SharpMoji.Locales` | The other 28 locale string tables | ~1.45 MB data |
 
-`FileSystemPackStore` writes under `Environment.SpecialFolder.LocalApplicationData` +
-`Oire/SharpMoji/{emojibaseVersion}/`, respecting `XDG_DATA_HOME` on Linux. Version-scoping
-the directory makes data upgrades a non-event.
+The core package alone is fully functional in English. If the satellite package is present it
+is discovered by assembly scan and `EmojiLocale.All` widens automatically; if absent,
+`Load("uk")` throws `LocaleNotAvailableException` naming the package to install. One satellite
+rather than 28 per-locale packages — 28 would be a publishing chore for no real benefit.
 
-`InMemoryPackStore` exists for sandboxed or read-only targets and for tests. Platform support
-is Windows, macOS and Linux for v1.0; the store abstraction is what will make MAUI/iOS/WASM
-cheap later, and **this should be confirmed against Sourire's roadmap before v1.0 ships**.
+### 7.3 The upgrade mechanism
 
-### 7.4 Refreshing data
+With no download path, a Unicode release reaches users as a package version. What that
+requires is a maintainer-side pipeline, and this is the part the original draft had no answer
+for at all:
 
-`scripts/update-emoji-data.ps1` pulls a named emojibase version, regenerates the embedded
-resources and the hash manifest, and updates the pinned constant. A test asserts the embedded
-data matches the pinned version, so a partial refresh fails CI rather than shipping.
+1. **`scripts/update-emoji-data.ps1 -EmojibaseVersion <v>`** fetches the pinned version,
+   regenerates the structure table, all string tables and the Hebrew pack (§7.4), and rewrites
+   `SharpMojiData.EmojibaseVersion` / `UnicodeVersion`.
+2. **The script emits a data diff** — emoji added, removed, relabeled, retagged, and any
+   change to group or skin structure. This is what the CHANGELOG entry is written from, and
+   what tells you whether a release is additive.
+3. **A scheduled CI job** checks for new Emojibase releases weekly and opens an issue when one
+   appears, so a Unicode update is not discovered by a user.
+4. **Golden tests pin the data**: record count and a content hash. An accidental or partial
+   regeneration fails CI instead of shipping.
+5. **Versioning policy.** New emoji are additive to the data but do not change the API, so a
+   Unicode update is a **minor** bump. A major bump is reserved for API changes. The data
+   version is queryable at runtime via `SharpMojiData.UnicodeVersion`, so an app can display
+   or log what it is carrying.
+
+### 7.4 Stable keys — what consumers may persist
+
+Sourire will store favorites and recents, so this needs to be explicit rather than discovered
+the hard way after an upgrade:
+
+- **`Hexcode` is the stable key.** Persist that.
+- **`Order` is not stable.** It is a dense index that renumbers whenever Unicode inserts
+  emoji. Treat it as opaque, use it for sorting within one session, never persist it.
+- **Array positions are not stable** for the same reason.
+- `Label` and `Tags` change with CLDR revisions and are display data, never keys.
+
+### 7.5 Generating locales CLDR has but Emojibase lacks
+
+`scripts/generate-cldr-locale.ps1 -Locale he` builds a locale pack directly from CLDR
+`common/annotations/{loc}.xml` and `common/annotationsDerived/{loc}.xml`. It is tractable
+precisely because of §3.7: structure is locale-independent, so the generator only has to
+produce a string table. Per entry it reads `type="tts"` as the label and the pipe-separated
+sibling annotation as tags, maps `cp` to a hexcode, and joins against the existing structure
+table. Codepoints CLDR annotates but Emojibase does not carry (punctuation, some symbols) are
+dropped; any emoji in the structure table with no CLDR annotation is reported rather than
+silently blank.
+
+This produces Hebrew, and any other CLDR locale, on the same footing as the rest.
+
+### 7.6 Side-loading
+
+`EmojiCatalog.LoadFrom(Stream)` accepts a pack in the library's own format. This keeps the
+no-network guarantee while letting someone ship updated or private data without waiting on a
+release. It is a small addition because the reader already exists.
 
 ---
 
@@ -371,18 +447,20 @@ data matches the pinned version, so a partial refresh fails CI rather than shipp
 
 ```
 SharpMojiException
-├── LocaleNotAvailableException     // not one of the 29 — lists what is
-├── PackDownloadException           // transport, HTTP status, timeout
-├── PackIntegrityException          // SHA-256 mismatch or malformed JSON
-└── PackStoreException              // I/O, permissions
+├── LocaleNotAvailableException     // unknown locale, or Oire.SharpMoji.Locales not installed
+└── PackFormatException             // malformed side-loaded pack (§7.6)
 ```
+
+Three of the draft's exception types described failures that can no longer occur, since
+there is nothing to download and nothing to store.
 
 Lookups never throw for "not found" — that is `null` or `false` (§5.5). Exceptions are for
 genuinely exceptional conditions.
 
 Logging via `ILogger` from `Microsoft.Extensions.Logging.Abstractions`, matching SharpSync.
-Debug: cache hits, query timing. Information: pack load and download. Warning: fallback to
-bundled `en`. Error: download and store failures.
+Debug: cache hits, query timing. Information: locale table decompressed. Warning: unknown
+locale requested. There is no error tier left worth logging — the failure modes it would have
+covered were all network and storage.
 
 ---
 
@@ -436,19 +514,24 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 
 | # | Phase | Content | Exit criteria |
 |---|---|---|---|
-| 0 | Spike | Deserialize all 29 locales; prove the three converters (§3.3) | Every locale round-trips losslessly |
-| 1 | Model + serialization | Records, source-gen context, embedded `en` | `emoji-test.txt` conformance passes |
-| 2 | Catalog + skin tones | Indexes, normalization, 1- and 2-slot lookup | All 19 dual-tone emoji resolve all 25 variants |
-| 3 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
-| 4 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |
-| 5 | Packs | Store, HTTP source, hashes, progress, cancellation | Integrity failure persists nothing |
-| 6 | Package | README, XML docs, sample, NOTICE, CI, NuGet | Trimmed + AOT sample runs on 3 OSes |
+| 0 | Spike | Deserialize all 28 locales; prove the three converters (§3.3) | Every locale round-trips losslessly |
+| 1 | Build pipeline | Structure/string split, Brotli resources, `update-emoji-data` script | Bundle ≤ 1.6 MB; regeneration is reproducible |
+| 2 | Model + catalog | Records, source-gen context, indexes, normalization | `emoji-test.txt` conformance passes |
+| 3 | Skin tones | 1- and 2-slot lookup by indexing published variants | All 19 dual-tone emoji resolve all 25 variants |
+| 4 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
+| 5 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |
+| 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |
+| 7 | Package | README, XML docs, sample, NOTICE, CI, satellite package | Trimmed + AOT sample runs on 3 OSes |
 
 Phase 0 is half a day and would have prevented most of this rewrite.
 
-**Estimate:** the draft's 4 weeks / 80–100 h is plausible for phases 1–6 *now that the data
-questions are answered*, but it was not plausible before, because it was costing an unknown.
-Phase 2 is the risk; if it runs long, phases 3–4 absorb it.
+Phase 1 moved ahead of the model because the structure/string split (§3.7) determines the
+shape everything else consumes. Dropping the download subsystem removed a phase outright;
+Hebrew adds one back, but a smaller one.
+
+**Estimate:** 4 weeks / 80–100 h remains plausible, and is better founded than the draft's
+identical number, which was costing unknowns. Phase 3 is the risk; phases 4–5 absorb overrun.
+Phase 6 is independent and can slip past v1.0 without blocking release.
 
 ---
 
@@ -488,32 +571,62 @@ quality, and download counts are mostly CI. Replaced with:
 - `emoji-test.txt` conformance: 100%, all 29 locales load.
 - Search golden corpus passes for `en`, `fr`, `uk`, `ru`.
 - Trimmed and NativeAOT samples run on Windows, macOS, Linux.
+- Core package data payload under 150 KB; full bundle under 1.6 MB.
 - Zero analyzer warnings with `TreatWarningsAsErrors`.
 - Public API reviewed and frozen via `PublicApiAnalyzers`.
 
 **Post-release**
 - Sourire depends on the published package with no `InternalsVisibleTo` and no forked code.
-- A Unicode 18 data refresh is a script run plus a version bump — no model changes.
+- A Unicode 18 refresh is one script run, a diff review and a minor bump — no model changes.
+  This is the specific thing §7.3 exists to guarantee.
 - No correctness issue in the first release requiring a data reshape.
 
 ---
 
-## 13. Open questions
+## 13. Beyond v1.0 — symbols
 
-1. **Hebrew.** Not in Emojibase (§3.1). Options: hand-authored pack, direct CLDR extraction,
-   or drop from v1.0 scope. Needs a decision — it was a stated goal.
-2. **Mobile/WASM.** Out of scope for v1.0; confirm against Sourire's roadmap before the
-   storage defaults harden (§7.3).
-3. **Facade naming.** `EmojiCatalog` is used throughout rather than `SharpMoji`, because a
-   type named `SharpMoji` inside namespace `Oire.SharpMoji` triggers CA1724 and constant
-   ambiguity. Trivial to rename now, breaking later.
+An accessible picker for mathematical operators, arrows, currency, chess, alchemy and braille
+is a natural extension: same search, same ranking, same picker UI, different character set.
+Assessed rather than assumed:
+
+- **Source.** Unicode UCD `UnicodeData.txt` (2.2 MB, 41,341 assigned codepoints). Filtering to
+  symbol categories (`Sm`, `Sc`, `Sk`, `So`) plus dashes gives **8,787 named characters** —
+  **67 KB gzipped**. Comparable to two emoji locales. Size is not an obstacle.
+- **The catch is localization.** UCD names are English-only formal names
+  (`ALCHEMICAL SYMBOL FOR GOLD`). CLDR annotations cover symbols only patchily: Arrows 91/112
+  and Mathematical Operators 94/256 are annotated, but Alchemical, Chess, Braille and
+  Mathematical Alphanumeric are **0**. So symbol names would be English-only for most blocks,
+  with localized names available for the arrows and common maths characters.
+- **Shape.** A separate `Oire.SharpMoji.Symbols` package over the same `IEmojiCatalog`-style
+  surface, not a widening of the emoji model — the two datasets share a search engine, not a
+  schema. UCD carries no skin tones, no groups and no shortcodes; emoji carry no block or
+  general category.
+- **Braille** is worth calling out separately given Orbit work: the 256-codepoint Braille
+  Patterns block is fully named in UCD and unannotated in CLDR, and dot-pattern search
+  (`dots-1245`) would be a better query model than names anyway.
+
+Not v1.0 scope. Recorded so the v1.0 search seam (`IEmojiMatcher`) is built wide enough to be
+reused rather than rewritten.
 
 ---
 
-## 14. Next steps
+## 14. Open questions
 
-1. Create `Oire/sharp-moji`, Apache-2.0, `.gitignore` for VisualStudio.
+1. **Facade naming.** `EmojiCatalog` is used throughout rather than `SharpMoji`, because a
+   type named `SharpMoji` inside namespace `Oire.SharpMoji` triggers CA1724 and constant
+   ambiguity. Trivial to rename now, breaking later.
+2. **Satellite granularity.** One `Oire.SharpMoji.Locales` package is assumed (§7.2). Revisit
+   only if 1.45 MB proves to matter to someone.
+
+Resolved since the draft: Hebrew (§3.1, §7.5 — generated from CLDR), platform scope (Windows,
+macOS, Linux; Sourire is Windows-only but the library is not), and downloads (§7.1 — removed).
+
+---
+
+## 15. Next steps
+
+1. ~~Create `Oire/sharp-moji`~~ — done, private until v1.0.
 2. Scaffold the solution to SharpSync's conventions (csproj properties, GitVersion,
-   analyzers, workflows, `.editorconfig`, `CLAUDE.md`).
-3. Run Phase 0 — it is half a day and de-risks everything after it.
-4. Settle the Hebrew question (§13.1) before advertising locale coverage.
+   analyzers, workflows, `CLAUDE.md`).
+3. Run Phase 0 — half a day, and it de-risks everything after it.
+4. Build the Phase 1 pipeline before writing model code; it fixes the shape everything reads.
