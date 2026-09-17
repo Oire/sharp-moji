@@ -14,6 +14,7 @@
   <Folder Name="/scripts/">
     <File Path="scripts/update-emoji-data.ps1" />
     <File Path="scripts/generate-cldr-locale.ps1" />
+    <File Path="scripts/fetch-emoji-corpus.ps1" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/SharpMoji/SharpMoji.csproj" />

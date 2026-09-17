@@ -84,14 +84,24 @@ Counts for `en`: **1949** base records, **3979** including skin variants. 9 reco
 group 2 (`components` — bare modifiers, not pickable). **26 records have no `group` at
 all**, so the group property must be nullable.
 
-### 3.3 Three parsing hazards
+### 3.3 Four parsing hazards
 
-These are load-bearing and each needs a custom `JsonConverter`:
+Confirmed in Phase 0 by deserializing all 28 locales with
+`JsonUnmappedMemberHandling.Disallow`:
 
-1. **`skins[].tone` is polymorphic** — `1` for single-tone emoji, `[1, 2]` for dual-tone.
-2. **`version` is an int *or* a float** (`1`, `0.6`). Model as `double`.
+1. **`skins[].tone` is polymorphic** — `1` for a single modifier, `[1, 2]` for two. Needs a
+   converter.
+2. **`emoticon` is polymorphic** — a string on 35 records (`":D"`), an array on 14
+   (`["xD", "XD"]`). Needs a converter. *Found during Phase 0; the original three were three.*
 3. **`text` is `""`** on 1590 records, meaning "no text presentation", not "empty string".
-   Normalize to `null`.
+   Normalize to `null` — and the converter must set `HandleNull => true`, or
+   System.Text.Json short-circuits the null on write and the round trip alters the data.
+4. **`version` is an int *or* a float** (`1`, `0.6`) — but this needs **no converter**. Modeling
+   it as `double` handles both natively. Only the draft's `int` would have thrown.
+
+Optional fields are `tags`, `order`, `group`, `subgroup`, `skins`, `emoticon` and `gender` on
+the top-level record, and `tags` and `gender` on skins. `gender` appearing on *both* levels is
+easy to miss; Phase 0's strict unmapped-member handling is what caught it.
 
 ### 3.4 Shortcodes are a separate data axis
 
@@ -260,17 +270,39 @@ The fix is also the simplification: **never synthesize sequences by inserting mo
 The data already contains every valid variant. Index it and look it up. This sidesteps ZWJ
 surgery entirely and is correct by construction.
 
+**How the 25 variants are actually stored** — established in Phase 0, and not what this section
+originally assumed. A dual-tone emoji's `skins` array is **5 single-tone entries plus 20
+pairs**, not 25 pairs:
+
+- Matching tones are encoded as **one** modifier applied to the whole sequence. Handshake with
+  two light-skinned hands is `1F91D-1F3FB` with `"tone": 1` — there is no `[1, 1]`.
+- Only the 20 mixed combinations are stored as pairs (`"tone": [1, 2]`).
+
+Together they cover the 5×5 matrix exactly once. The consequence for the API is direct: asking
+for `(Light, Light)` must resolve to the single-tone entry, so a lookup that searched for a
+matching *pair* would find nothing. And a two-slot emoji does accept a single tone — meaning
+"both the same" — which contradicts the rule this section first stated.
+
 ```csharp
 int slots = catalog.GetSkinToneSlots("🤝");               // 0, 1, or 2
 IReadOnlyList<EmojiSkin> skins = catalog.GetSkins("🤝");   // 25 for dual, 5 for single
 
 bool ok  = catalog.TryGetSkin("👍", SkinTone.Medium, out var single);
 bool ok2 = catalog.TryGetSkin("🤝", SkinTone.Light, SkinTone.MediumLight, out var dual);
-// dual.Sequence == "🫱🏻‍🫲🏼"
+// dual.Sequence == "🤝🏻‍🤝🏼" (the mixed pair)
 
-// Asking for two tones on a one-slot emoji, or one on a two-slot emoji, returns false.
-// It does not throw and does not guess.
+// A two-slot emoji also accepts one tone, meaning both the same. This resolves to the
+// single-modifier entry, not to a pair:
+bool ok3 = catalog.TryGetSkin("🤝", SkinTone.Light, out var both);          // "🤝🏻"
+bool ok4 = catalog.TryGetSkin("🤝", SkinTone.Light, SkinTone.Light, out var same);
+// ok3 and ok4 return the same record: (Light, Light) normalizes to the single-tone entry.
+
+// Passing two tones to a one-slot emoji returns false. It does not throw and does not guess.
 ```
+
+`EmojiSkin.Tones` therefore carries one entry for a matching-tone variant and two for a mixed
+one. Callers that want a uniform view should read `GetSkinToneSlots` rather than
+`Tones.Length`.
 
 ```csharp
 public enum SkinTone { None = 0, Light = 1, MediumLight = 2, Medium = 3, MediumDark = 4, Dark = 5 }
@@ -514,7 +546,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 
 | # | Phase | Content | Exit criteria |
 |---|---|---|---|
-| 0 | Spike | Deserialize all 28 locales; prove the three converters (§3.3) | Every locale round-trips losslessly |
+| 0 | ~~Spike~~ **Done** | Deserialize all 28 locales; prove the converters (§3.3) | ✅ 95 tests, every locale round-trips losslessly |
 | 1 | Build pipeline | Structure/string split, Brotli resources, `update-emoji-data` script | Bundle ≤ 1.6 MB; regeneration is reproducible |
 | 2 | Model + catalog | Records, source-gen context, indexes, normalization | `emoji-test.txt` conformance passes |
 | 3 | Skin tones | 1- and 2-slot lookup by indexing published variants | All 19 dual-tone emoji resolve all 25 variants |
@@ -523,7 +555,17 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |
 | 7 | Package | README, XML docs, sample, NOTICE, CI, satellite package | Trimmed + AOT sample runs on 3 OSes |
 
-Phase 0 is half a day and would have prevented most of this rewrite.
+Phase 0 is half a day and would have prevented most of this rewrite. It has now run, and earned
+its place: it found a fourth polymorphic field (`emoticon`), a `gender` field on skins as well as
+on records, and — the one that would have hurt — that the 25 skin variants of a dual-tone emoji
+are 5 singles plus 20 pairs rather than 25 pairs, which invalidated this document's own
+description of the lookup contract (§5.3). All three would have surfaced as bugs in Phase 3
+otherwise.
+
+Phase 0's parser lives in the test project rather than in `src/`. The shipped library reads
+SharpMoji's own embedded format, not Emojibase's, so the Emojibase wire model is build-time
+only; Phase 1 promotes it into the data tool. The `Serialization/` folder in §4 is for the
+embedded-format reader.
 
 Phase 1 moved ahead of the model because the structure/string split (§3.7) determines the
 shape everything else consumes. Dropping the download subsystem removed a phase outright;

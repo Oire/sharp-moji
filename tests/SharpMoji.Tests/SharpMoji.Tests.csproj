@@ -17,6 +17,10 @@
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
+    <!-- The data-assumption tests need the Emojibase corpus, which is fetched rather than
+         committed (scripts/fetch-emoji-corpus.ps1). SkippableFact lets them skip cleanly when it
+         is absent instead of failing an offline `dotnet test`. -->
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.85" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

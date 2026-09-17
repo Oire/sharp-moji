@@ -419,3 +419,7 @@ FodyWeavers.xsd
 
 # Claude local settings
 .claude/settings.local.json
+
+# Emoji corpus fetched by scripts/fetch-emoji-corpus.ps1 for the data-assumption tests.
+# ~22 MB of upstream fixtures; regenerate rather than commit.
+.emoji-corpus/
