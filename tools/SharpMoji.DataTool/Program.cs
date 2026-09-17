@@ -91,7 +91,8 @@ if (diff is not null) {
     diff.Report(Console.Out);
 } else {
     Console.WriteLine();
-    Console.WriteLine("No previous packs found, so there is nothing to diff against.");
+    Console.WriteLine("No readable previous packs, so there is nothing to diff against.");
+    Console.WriteLine("(Expected on a first run, or when the pack format itself has changed.)");
 }
 
 Console.WriteLine();

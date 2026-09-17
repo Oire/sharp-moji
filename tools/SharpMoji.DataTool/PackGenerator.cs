@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Globalization;
 using Oire.SharpMoji.Data;
 using Oire.SharpMoji.DataTool.Emojibase;
 
@@ -33,7 +34,54 @@ internal static class PackGenerator {
             GroupKeys = OrderedKeys(messages.Groups),
             SubgroupKeys = OrderedKeys(messages.Subgroups),
             SkinToneKeys = BuildSkinToneKeys(messages.SkinTones),
+            Locales = BuildLocales(),
         };
+    }
+
+    /// <summary>
+    /// Builds the locale metadata baked into the structure pack.
+    /// </summary>
+    /// <remarks>
+    /// Names come from <see cref="CultureInfo"/> on the build machine and are then frozen into the
+    /// pack, rather than being looked up at run time. That keeps them identical everywhere and
+    /// keeps the library working under <c>InvariantGlobalization</c>, where the lookup would
+    /// otherwise return the code back as the name.
+    /// </remarks>
+    private static PackLocale[] BuildLocales() =>
+    [
+        .. EmojiCorpus.Locales.Select(code => {
+            var culture = CultureInfo.GetCultureInfo(ToCultureName(code));
+
+            return new PackLocale {
+                Code = code,
+                EnglishName = culture.EnglishName,
+                NativeName = culture.NativeName,
+                IsRightToLeft = culture.TextInfo.IsRightToLeft,
+            };
+        })
+    ];
+
+    /// <summary>
+    /// Maps an Emojibase locale code to the .NET culture name for the same language.
+    /// </summary>
+    /// <remarks>
+    /// Emojibase lowercases the whole code; .NET expects a title-cased script subtag and an
+    /// uppercase region subtag, so "zh-hant" has to become "zh-Hant" and "en-gb" has to become
+    /// "en-GB" or the lookup returns a culture named after the code itself.
+    /// </remarks>
+    private static string ToCultureName(string locale) {
+        var parts = locale.Split('-');
+
+        if (parts.Length == 1) {
+            return parts[0];
+        }
+
+        // A four-letter subtag is a script (Hant); anything shorter is a region (GB, MX).
+        var subtag = parts[1].Length == 4
+            ? string.Concat(char.ToUpperInvariant(parts[1][0]), parts[1][1..].ToLowerInvariant())
+            : parts[1].ToUpperInvariant();
+
+        return $"{parts[0]}-{subtag}";
     }
 
     /// <summary>Builds one language's string pack.</summary>

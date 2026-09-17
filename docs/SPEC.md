@@ -84,6 +84,10 @@ Counts for `en`: **1949** base records, **3979** including skin variants. 9 reco
 group 2 (`components` — bare modifiers, not pickable). **26 records have no `group` at
 all**, so the group property must be nullable.
 
+Phase 2 identified those 26: they are the **regional indicator letters** A–Z, the building
+blocks flags are made of. Unicode's own `emoji-test.txt` lists regional indicators only in
+pairs, never standalone, which is why they have no category and are excluded from `All`.
+
 ### 3.3 Four parsing hazards
 
 Confirmed in Phase 0 by deserializing all 28 locales with
@@ -156,6 +160,20 @@ tables:
 Against 26.5 MB for the naive approach of embedding 28 full `data.json` files. This is what
 makes shipping every locale in the box practical, and it is why there is no download
 subsystem (§7).
+
+### 3.8 Some sequences are valid but not recommended
+
+Emojibase supplies skin-tone variants that Unicode does **not** list as recommended for general
+interchange (RGI). Measured against `emoji-test.txt` 16.0: **150 variants across exactly 6
+emoji** — 👯 and 🤼, each in its neutral, men's and women's form, all 25 variants of each.
+
+The sequences are well-formed, but no platform is obliged to render them as a single glyph, so
+they may appear as the base emoji followed by a stray tone swatch. For a picker that is worse
+than not offering the tone at all.
+
+This is recorded rather than acted on: Phase 3 designs the skin-tone API and should expose the
+distinction there. It cannot be derived at run time, since it needs Unicode's RGI list, so it
+would have to be baked into the structure pack at generation time.
 
 ---
 
@@ -556,7 +574,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 |---|---|---|---|
 | 0 | ~~Spike~~ **Done** | Deserialize all 28 locales; prove the converters (§3.3) | ✅ 95 tests, every locale round-trips losslessly |
 | 1 | ~~Build pipeline~~ **Done** | Structure/string split, Brotli resources, `update-emoji-data` script | ✅ Bundle 1,360 KB; regeneration byte-reproducible |
-| 2 | Model + catalog | Records, source-gen context, indexes, normalization | `emoji-test.txt` conformance passes |
+| 2 | ~~Model + catalog~~ **Done** | Records, indexes, normalization, locale metadata | ✅ conformance passes against `emoji-test.txt` |
 | 3 | Skin tones | 1- and 2-slot lookup by indexing published variants | All 19 dual-tone emoji resolve all 25 variants |
 | 4 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
 | 5 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |

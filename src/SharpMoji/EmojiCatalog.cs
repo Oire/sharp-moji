@@ -1,0 +1,280 @@
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
+using Oire.SharpMoji.Data;
+
+namespace Oire.SharpMoji;
+
+/// <summary>
+/// Emoji data in one language, built from the embedded packs.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Construction is single-phase: a catalog handed to you is already loaded. There is no
+/// <c>new</c> followed by an initialize call, and therefore no window in which a catalog exists
+/// but cannot answer questions.
+/// </para>
+/// <para>
+/// Loading decompresses about 45 KB of Brotli and builds the lookup indexes, which takes a few
+/// milliseconds. Catalogs are cached per language, so asking twice costs nothing the second time.
+/// </para>
+/// </remarks>
+public sealed class EmojiCatalog: IEmojiCatalog {
+    private static readonly ConcurrentDictionary<string, EmojiCatalog> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Lazy<StructurePack> Structure = new(EmbeddedPackReader.ReadStructure);
+
+    private readonly FrozenLookup _bySequence;
+    private readonly FrozenLookup _byHexcode;
+    private readonly FrozenLookup _byEmoticon;
+    private readonly ImmutableDictionary<string, ImmutableArray<Emoji>> _byGroup;
+    private readonly ImmutableDictionary<string, ImmutableArray<Emoji>> _bySubgroup;
+
+    /// <inheritdoc />
+    public EmojiLocale Locale { get; }
+
+    /// <inheritdoc />
+    public ImmutableArray<Emoji> All { get; }
+
+    /// <inheritdoc />
+    public ImmutableArray<Emoji> AllIncludingComponents { get; }
+
+    /// <inheritdoc />
+    public ImmutableArray<EmojiGroup> Groups { get; }
+
+    /// <inheritdoc />
+    public ImmutableArray<EmojiSubgroup> Subgroups { get; }
+
+    /// <inheritdoc />
+    public ImmutableArray<string> SkinToneNames { get; }
+
+    /// <summary>The English catalog, which every installation carries.</summary>
+    public static EmojiCatalog English => Load("en");
+
+    /// <summary>
+    /// Loads the catalog for a language.
+    /// </summary>
+    /// <param name="locale">A language code such as <c>"uk"</c>, or an <see cref="EmojiLocale.Code"/>.</param>
+    /// <returns>The catalog, cached after the first call.</returns>
+    /// <exception cref="ArgumentException"><paramref name="locale"/> is not an embedded language.</exception>
+    /// <remarks>Use <see cref="TryLoad"/> when the code comes from user input or a settings file.</remarks>
+    public static EmojiCatalog Load(string locale) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(locale);
+
+        return TryLoad(locale, out var catalog)
+            ? catalog!
+            : throw new ArgumentException(
+                $"'{locale}' is not an embedded language. Available: {string.Join(", ", EmojiLocale.All.Select(l => l.Code))}.",
+                nameof(locale));
+    }
+
+    /// <summary>Loads the catalog for a language, if there is one.</summary>
+    /// <param name="locale">A language code, matched case-insensitively.</param>
+    /// <param name="catalog">The catalog, or <see langword="null"/> when the language is unknown.</param>
+    /// <returns><see langword="true"/> when the language is embedded.</returns>
+    public static bool TryLoad(string? locale, out EmojiCatalog? catalog) {
+        var resolved = EmojiLocale.Find(locale);
+
+        if (resolved is null) {
+            catalog = null;
+            return false;
+        }
+
+        catalog = Cache.GetOrAdd(resolved.Code, static code => new EmojiCatalog(code));
+        return true;
+    }
+
+    private EmojiCatalog(string localeCode) {
+        var structure = Structure.Value;
+
+        if (!EmbeddedPackReader.TryReadStrings(localeCode, out var strings)) {
+            throw new InvalidOperationException(
+                $"The string pack for '{localeCode}' is missing from the assembly. Run scripts/update-emoji-data.ps1.");
+        }
+
+        Locale = EmojiLocale.Find(localeCode)!;
+
+        Groups = BuildGroups(structure.GroupKeys, strings!.Groups);
+        Subgroups = BuildSubgroups(structure.SubgroupKeys, strings.Subgroups);
+        SkinToneNames = [.. strings.SkinTones];
+
+        var groupsByIndex = Groups.ToDictionary(g => g.Index);
+        var subgroupsByIndex = Subgroups.ToDictionary(g => g.Index);
+
+        var all = ImmutableArray.CreateBuilder<Emoji>(structure.Emoji.Length);
+
+        foreach (var packed in structure.Emoji) {
+            all.Add(Build(packed, strings, groupsByIndex, subgroupsByIndex));
+        }
+
+        // Canonical order, with the unordered stragglers last rather than dropped. OrderBy is
+        // stable, so records sharing an order keep their source sequence.
+        AllIncludingComponents = [.. all.OrderBy(e => e.Order ?? int.MaxValue)];
+        All = [.. AllIncludingComponents.Where(e => e.Group is not { IsComponent: true })];
+
+        _bySequence = BuildSequenceIndex(AllIncludingComponents);
+        _byHexcode = BuildHexcodeIndex(AllIncludingComponents);
+        _byEmoticon = BuildEmoticonIndex(AllIncludingComponents);
+        _byGroup = GroupBy(All, e => e.Group?.Key);
+        _bySubgroup = GroupBy(All, e => e.Subgroup?.Key);
+    }
+
+    /// <inheritdoc />
+    public Emoji? Find(string? sequence) =>
+        string.IsNullOrEmpty(sequence) ? null : _bySequence.Find(EmojiSequences.Normalize(sequence));
+
+    /// <inheritdoc />
+    public Emoji? FindByHexcode(string? hexcode) =>
+        string.IsNullOrWhiteSpace(hexcode) ? null : _byHexcode.Find(hexcode.Trim());
+
+    /// <inheritdoc />
+    public Emoji? FindByEmoticon(string? emoticon) =>
+        string.IsNullOrWhiteSpace(emoticon) ? null : _byEmoticon.Find(emoticon);
+
+    /// <inheritdoc />
+    public ImmutableArray<Emoji> GetByGroup(EmojiGroup group) {
+        ArgumentNullException.ThrowIfNull(group);
+
+        return _byGroup.TryGetValue(group.Key, out var emoji) ? emoji : [];
+    }
+
+    /// <inheritdoc />
+    public ImmutableArray<Emoji> GetBySubgroup(EmojiSubgroup subgroup) {
+        ArgumentNullException.ThrowIfNull(subgroup);
+
+        return _bySubgroup.TryGetValue(subgroup.Key, out var emoji) ? emoji : [];
+    }
+
+    private static Emoji Build(
+        PackEmoji packed,
+        StringPack strings,
+        Dictionary<int, EmojiGroup> groups,
+        Dictionary<int, EmojiSubgroup> subgroups) => new() {
+            Sequence = packed.Sequence,
+            Hexcode = packed.Hexcode,
+            Label = Label(strings, packed.Hexcode),
+            Tags = Tags(strings, packed.Hexcode),
+            TextSequence = packed.TextSequence,
+            Presentation = (EmojiPresentation)packed.Presentation,
+            Order = packed.Order,
+            Group = packed.Group is { } g && groups.TryGetValue(g, out var group) ? group : null,
+            Subgroup = packed.Subgroup is { } s && subgroups.TryGetValue(s, out var subgroup) ? subgroup : null,
+            UnicodeVersion = packed.Version,
+            Emoticons = packed.Emoticons is { Length: > 0 } emoticons ? [.. emoticons] : [],
+            Gender = packed.Gender is { } gender ? (EmojiGender)gender : null,
+            Skins = packed.Skins is { Length: > 0 } skins
+                ? [.. skins.Select(skin => BuildSkin(skin, strings))]
+                : [],
+        };
+
+    private static EmojiSkin BuildSkin(PackSkin packed, StringPack strings) => new() {
+        Sequence = packed.Sequence,
+        Hexcode = packed.Hexcode,
+        Label = Label(strings, packed.Hexcode),
+        Tones = [.. packed.Tones.Select(t => (SkinTone)t)],
+        Order = packed.Order,
+        Gender = packed.Gender is { } gender ? (EmojiGender)gender : null,
+    };
+
+    private static string Label(StringPack strings, string hexcode) =>
+        strings.Labels.TryGetValue(hexcode, out var label) ? label : hexcode;
+
+    private static ImmutableArray<string> Tags(StringPack strings, string hexcode) =>
+        strings.Tags.TryGetValue(hexcode, out var tags) ? [.. tags] : [];
+
+    private static ImmutableArray<EmojiGroup> BuildGroups(string[] keys, string[] names) =>
+    [
+        .. keys.Select((key, index) => new EmojiGroup
+        {
+            Key = key,
+            Name = index < names.Length ? names[index] : key,
+            Index = index,
+        })
+    ];
+
+    private static ImmutableArray<EmojiSubgroup> BuildSubgroups(string[] keys, string[] names) =>
+    [
+        .. keys.Select((key, index) => new EmojiSubgroup
+        {
+            Key = key,
+            Name = index < names.Length ? names[index] : key,
+            Index = index,
+        })
+    ];
+
+    /// <summary>
+    /// Indexes every emoji by sequence, including its skin-tone variants.
+    /// </summary>
+    /// <remarks>
+    /// Keys are normalized, so both the qualified and unqualified forms of the same emoji land on
+    /// one entry. Variants map to their base emoji, which is what a caller pasting <c>"👍🏽"</c>
+    /// almost always wants.
+    /// </remarks>
+    private static FrozenLookup BuildSequenceIndex(ImmutableArray<Emoji> emoji) {
+        var map = new Dictionary<string, Emoji>(emoji.Length * 2, StringComparer.Ordinal);
+
+        foreach (var item in emoji) {
+            map.TryAdd(EmojiSequences.Normalize(item.Sequence), item);
+
+            if (item.TextSequence is { Length: > 0 } text) {
+                map.TryAdd(EmojiSequences.Normalize(text), item);
+            }
+
+            foreach (var skin in item.Skins) {
+                map.TryAdd(EmojiSequences.Normalize(skin.Sequence), item);
+            }
+        }
+
+        return new FrozenLookup(map, StringComparer.Ordinal);
+    }
+
+    private static FrozenLookup BuildHexcodeIndex(ImmutableArray<Emoji> emoji) {
+        var map = new Dictionary<string, Emoji>(emoji.Length * 2, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in emoji) {
+            map.TryAdd(item.Hexcode, item);
+
+            foreach (var skin in item.Skins) {
+                map.TryAdd(skin.Hexcode, item);
+            }
+        }
+
+        return new FrozenLookup(map, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static FrozenLookup BuildEmoticonIndex(ImmutableArray<Emoji> emoji) {
+        var map = new Dictionary<string, Emoji>(64, StringComparer.Ordinal);
+
+        foreach (var item in emoji) {
+            foreach (var emoticon in item.Emoticons) {
+                map.TryAdd(emoticon, item);
+            }
+        }
+
+        return new FrozenLookup(map, StringComparer.Ordinal);
+    }
+
+    private static ImmutableDictionary<string, ImmutableArray<Emoji>> GroupBy(
+        ImmutableArray<Emoji> emoji,
+        Func<Emoji, string?> key) =>
+        emoji
+            .Where(e => key(e) is not null)
+            .GroupBy(e => key(e)!, StringComparer.Ordinal)
+            .ToImmutableDictionary(g => g.Key, g => g.ToImmutableArray(), StringComparer.Ordinal);
+
+    /// <summary>
+    /// A read-only string-keyed lookup built once at construction.
+    /// </summary>
+    /// <remarks>
+    /// Wraps <see cref="FrozenDictionary{TKey, TValue}"/>, which trades a slower build for faster
+    /// reads — exactly the right trade for a catalog that is built once and then queried for the
+    /// lifetime of the application.
+    /// </remarks>
+    private sealed class FrozenLookup {
+        private readonly FrozenDictionary<string, Emoji> _entries;
+
+        public FrozenLookup(Dictionary<string, Emoji> entries, StringComparer comparer) =>
+            _entries = entries.ToFrozenDictionary(comparer);
+
+        public Emoji? Find(string key) => _entries.GetValueOrDefault(key);
+    }
+}

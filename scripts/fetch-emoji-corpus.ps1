@@ -82,6 +82,27 @@ foreach ($preset in @('cldr', 'cldr-native', 'emojibase', 'emojibase-legacy', 'g
     $downloaded++
 }
 
+# Unicode's own conformance list, used to prove that every emoji it names resolves through the
+# catalog - including the minimally-qualified and unqualified forms, which is the whole point of
+# normalizing U+FE0F away (docs/SPEC.md section 3.6).
+#
+# Pinned to 16.0 rather than matching the data: Unicode publishes emoji-test.txt under
+# /Public/emoji/<version>/, which stops at 16.0, while /latest/ resolves to 18.0. There is no
+# 17.0 file to match emojibase 17.0.0 against. 16.0 is a strict subset of 17.0 - emoji are never
+# removed - so the tests assert superset conformance in both directions instead.
+$conformance = Join-Path $root 'emoji-test-16.0.txt'
+
+if ((-not (Test-Path $conformance)) -or $Force) {
+    Invoke-WebRequest -Uri 'https://www.unicode.org/Public/emoji/16.0/emoji-test.txt' `
+        -OutFile $conformance -MaximumRetryCount 3 -RetryIntervalSec 2
+    $downloaded++
+} else {
+    $skipped++
+}
+
+Write-Host '  emoji-test 16.0' -NoNewline
+Write-Host ' ok' -ForegroundColor Green
+
 $size = (Get-ChildItem $root -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
 
 Write-Host ''

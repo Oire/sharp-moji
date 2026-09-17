@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json;
 using Oire.SharpMoji.Data;
 
 namespace Oire.SharpMoji.DataTool;
@@ -36,12 +37,20 @@ internal sealed record PackDiff {
         StructurePack oldStructure;
         StringPack oldEnglish;
 
-        using (var structureStream = File.OpenRead(structurePath)) {
-            oldStructure = EmojiPackSerializer.ReadStructure(structureStream);
-        }
+        try {
+            using (var structureStream = File.OpenRead(structurePath)) {
+                oldStructure = EmojiPackSerializer.ReadStructure(structureStream);
+            }
 
-        using (var englishStream = File.OpenRead(englishPath)) {
-            oldEnglish = EmojiPackSerializer.ReadStrings(englishStream);
+            using (var englishStream = File.OpenRead(englishPath)) {
+                oldEnglish = EmojiPackSerializer.ReadStrings(englishStream);
+            }
+        } catch (Exception e) when (e is JsonException or InvalidDataException) {
+            // The packs on disk predate a change to the pack format itself, so they cannot be read
+            // by the current reader. Regeneration must still succeed: a format change is exactly
+            // when there is nothing meaningful to diff, and failing here would make the format
+            // impossible to evolve without hand-deleting the old files first.
+            return null;
         }
 
         var oldByHexcode = oldStructure.Emoji.ToDictionary(e => e.Hexcode, StringComparer.Ordinal);

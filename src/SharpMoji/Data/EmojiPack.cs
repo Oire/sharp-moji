@@ -39,6 +39,31 @@ internal sealed class StructurePack {
     /// <summary>Skin-tone keys in Fitzpatrick order, so index 0 is tone 1.</summary>
     [JsonPropertyName("st")]
     public required string[] SkinToneKeys { get; init; }
+
+    /// <summary>Metadata for every embedded language.</summary>
+    /// <remarks>
+    /// Baked in at generation time rather than derived from <c>CultureInfo</c> at run time, so the
+    /// names are identical on every machine and survive <c>InvariantGlobalization</c>.
+    /// </remarks>
+    [JsonPropertyName("loc")]
+    public required PackLocale[] Locales { get; init; }
+}
+
+/// <summary>One embedded language's metadata.</summary>
+internal sealed class PackLocale {
+    [JsonPropertyName("c")]
+    public required string Code { get; init; }
+
+    [JsonPropertyName("e")]
+    public required string EnglishName { get; init; }
+
+    [JsonPropertyName("n")]
+    public required string NativeName { get; init; }
+
+    /// <summary>Omitted for the left-to-right majority, which is most of the bytes saved here.</summary>
+    [JsonPropertyName("r")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsRightToLeft { get; init; }
 }
 
 /// <summary>One emoji's structure, with no localized text.</summary>

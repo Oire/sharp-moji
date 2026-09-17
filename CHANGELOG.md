@@ -20,5 +20,9 @@ Emoji data updates are additive and do not change the API, so a new Unicode rele
   `tools/SharpMoji.DataTool` from one shared structure table plus per-language string tables.
 - `scripts/update-emoji-data.ps1` regenerates the packs and reports a readable diff of what
   changed, since the packs themselves are compressed binary.
+- `EmojiCatalog`, `Emoji`, `EmojiGroup` and `EmojiLocale`: immutable, per-language emoji data
+  with lookup by sequence, hexcode or emoticon, canonical ordering and localized category names.
+- Variation-selector normalization, so an emoji resolves whether or not it carries U+FE0F.
+- Conformance tests against Unicode's own `emoji-test.txt`.
 
 [Unreleased]: https://github.com/Oire/sharp-moji/commits/master
