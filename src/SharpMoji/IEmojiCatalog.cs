@@ -83,4 +83,54 @@ public interface IEmojiCatalog {
     /// <param name="subgroup">A subgroup from <see cref="Subgroups"/>.</param>
     /// <returns>The emoji in that subgroup, empty if the subgroup is unknown to this catalog.</returns>
     ImmutableArray<Emoji> GetBySubgroup(EmojiSubgroup subgroup);
+
+    /// <summary>
+    /// How many skin-tone modifiers an emoji accepts: none, one, or one per person.
+    /// </summary>
+    /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>
+    /// <returns>0, 1 or 2. Unknown input reports 0.</returns>
+    /// <remarks>
+    /// Two means the sequence depicts two people who can be toned independently — 🤝 and 🧑‍🤝‍🧑 and
+    /// their kin, nineteen emoji in all. A picker should offer a tone grid for those and a single
+    /// row for everything else.
+    /// </remarks>
+    int GetSkinToneSlots(string? sequence);
+
+    /// <summary>Returns every skin-tone variant of an emoji, in canonical order.</summary>
+    /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>
+    /// <returns>
+    /// The variants — five for a one-slot emoji, twenty-five for a two-slot one — or empty when
+    /// the emoji takes no tones or is unknown.
+    /// </returns>
+    ImmutableArray<EmojiSkin> GetSkins(string? sequence);
+
+    /// <summary>
+    /// Finds the variant where every person shares one skin tone.
+    /// </summary>
+    /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>
+    /// <param name="tone">The tone to apply. <see cref="SkinTone.None"/> is not a variant.</param>
+    /// <param name="skin">The variant, or <see langword="null"/> when there is none.</param>
+    /// <returns><see langword="true"/> when a variant was found.</returns>
+    /// <remarks>
+    /// Works for one-slot and two-slot emoji alike. For a two-slot emoji it returns the variant
+    /// where both people share the tone, which upstream stores with a single modifier rather than
+    /// a repeated pair.
+    /// </remarks>
+    bool TryGetSkin(string? sequence, SkinTone tone, out EmojiSkin? skin);
+
+    /// <summary>
+    /// Finds the variant where two people carry the given skin tones.
+    /// </summary>
+    /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>
+    /// <param name="first">The first person's tone.</param>
+    /// <param name="second">The second person's tone.</param>
+    /// <param name="skin">The variant, or <see langword="null"/> when there is none.</param>
+    /// <returns><see langword="true"/> when a variant was found.</returns>
+    /// <remarks>
+    /// Passing the same tone twice is accepted and resolves to the matching-tone variant, so
+    /// callers can always pass two tones without special-casing the diagonal of their tone grid.
+    /// Passing two different tones to a one-slot emoji returns <see langword="false"/> rather than
+    /// guessing which one was meant.
+    /// </remarks>
+    bool TryGetSkin(string? sequence, SkinTone first, SkinTone second, out EmojiSkin? skin);
 }

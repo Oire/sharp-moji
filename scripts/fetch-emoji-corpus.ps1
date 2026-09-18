@@ -82,26 +82,40 @@ foreach ($preset in @('cldr', 'cldr-native', 'emojibase', 'emojibase-legacy', 'g
     $downloaded++
 }
 
-# Unicode's own conformance list, used to prove that every emoji it names resolves through the
-# catalog - including the minimally-qualified and unqualified forms, which is the whole point of
-# normalizing U+FE0F away (docs/SPEC.md section 3.6).
+# Unicode's own conformance lists, used to check the catalog against an independent source rather
+# than against the Emojibase corpus it was generated from.
 #
-# Pinned to 16.0 rather than matching the data: Unicode publishes emoji-test.txt under
-# /Public/emoji/<version>/, which stops at 16.0, while /latest/ resolves to 18.0. There is no
-# 17.0 file to match emojibase 17.0.0 against. 16.0 is a strict subset of 17.0 - emoji are never
-# removed - so the tests assert superset conformance in both directions instead.
-$conformance = Join-Path $root 'emoji-test-16.0.txt'
-
-if ((-not (Test-Path $conformance)) -or $Force) {
-    Invoke-WebRequest -Uri 'https://www.unicode.org/Public/emoji/16.0/emoji-test.txt' `
-        -OutFile $conformance -MaximumRetryCount 3 -RetryIntervalSec 2
-    $downloaded++
-} else {
-    $skipped++
+# TWO files, because neither alone can check both directions. Unicode publishes emoji-test.txt
+# under /Public/emoji/<version>/, which stops at 16.0, while /latest/ is 18.0 - there is no 17.0
+# file matching emojibase 17.0.0.
+#
+#   16.0 - a strict SUBSET of our data, since emoji are never removed. Used to assert that every
+#          emoji Unicode lists resolves through the catalog, including the minimally-qualified
+#          and unqualified spellings (docs/SPEC.md section 3.6).
+#
+#   18.0 - a strict SUPERSET of our data. Used for the converse: every sequence SharpMoji ships
+#          must be one Unicode actually defines. Checking that against 16.0 instead reports false
+#          positives for anything introduced later, which is exactly the mistake that produced
+#          the retracted claim in SPEC 3.8.
+$conformanceVersions = @{
+    '16.0' = 'https://www.unicode.org/Public/emoji/16.0/emoji-test.txt'
+    '18.0' = 'https://www.unicode.org/Public/emoji/latest/emoji-test.txt'
 }
 
-Write-Host '  emoji-test 16.0' -NoNewline
-Write-Host ' ok' -ForegroundColor Green
+foreach ($version in $conformanceVersions.Keys | Sort-Object) {
+    $target = Join-Path $root "emoji-test-$version.txt"
+
+    if ((-not (Test-Path $target)) -or $Force) {
+        Invoke-WebRequest -Uri $conformanceVersions[$version] -OutFile $target `
+            -MaximumRetryCount 3 -RetryIntervalSec 2
+        $downloaded++
+    } else {
+        $skipped++
+    }
+
+    Write-Host "  emoji-test $version" -NoNewline
+    Write-Host ' ok' -ForegroundColor Green
+}
 
 $size = (Get-ChildItem $root -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
 

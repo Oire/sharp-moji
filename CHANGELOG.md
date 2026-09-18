@@ -23,6 +23,10 @@ Emoji data updates are additive and do not change the API, so a new Unicode rele
 - `EmojiCatalog`, `Emoji`, `EmojiGroup` and `EmojiLocale`: immutable, per-language emoji data
   with lookup by sequence, hexcode or emoticon, canonical ordering and localized category names.
 - Variation-selector normalization, so an emoji resolves whether or not it carries U+FE0F.
-- Conformance tests against Unicode's own `emoji-test.txt`.
+- Skin-tone lookup: `GetSkinToneSlots`, `GetSkins` and `TryGetSkin` for one tone or two, covering
+  the 19 emoji whose two people are toned independently. Matching tones resolve to the
+  single-modifier variant, so a caller can pass every cell of a 5x5 grid without special cases.
+- Conformance tests against Unicode's own `emoji-test.txt`, checked in both directions
+  against the two published versions that can each answer one of them.
 
 [Unreleased]: https://github.com/Oire/sharp-moji/commits/master

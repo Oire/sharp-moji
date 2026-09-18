@@ -46,7 +46,32 @@ foreach (var group in ukrainian.Groups.Where(g => !g.IsComponent).Take(5)) {
 }
 
 Console.WriteLine();
-Console.WriteLine("Skin-tone lookup and search arrive in later phases — see docs/SPEC.md.");
+Console.WriteLine("Skin tones — one modifier:");
+
+foreach (var tone in (SkinTone[])[SkinTone.Light, SkinTone.Medium, SkinTone.Dark]) {
+    if (english.TryGetSkin("👍", tone, out var skin)) {
+        Console.WriteLine($"  {skin!.Sequence}  {skin.Label}");
+    }
+}
+
+Console.WriteLine();
+Console.WriteLine("Skin tones — two people, toned independently:");
+
+// The 5x5 grid a picker would draw for one of the 19 two-slot emoji. The diagonal is stored with
+// a single modifier rather than a repeated pair, which TryGetSkin hides.
+var tones = (SkinTone[])[SkinTone.Light, SkinTone.MediumLight, SkinTone.Medium, SkinTone.MediumDark, SkinTone.Dark];
+
+foreach (var first in tones) {
+    var row = tones.Select(second =>
+        english.TryGetSkin("🤝", first, second, out var skin) ? skin!.Sequence : "??");
+
+    Console.WriteLine($"  {string.Join("  ", row)}");
+}
+
+Console.WriteLine();
+Console.WriteLine($"Two-slot emoji: {english.All.Count(e => english.GetSkinToneSlots(e.Sequence) == 2)}");
+Console.WriteLine();
+Console.WriteLine("Search arrives in a later phase — see docs/SPEC.md.");
 
 static string Describe(Emoji? emoji) =>
     emoji is null ? "(not found)" : $"{emoji.Sequence}  {emoji.Hexcode,-12} {emoji.Label}";

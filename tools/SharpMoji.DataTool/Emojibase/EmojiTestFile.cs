@@ -48,26 +48,47 @@ public enum EmojiQualification {
 /// </para>
 /// </remarks>
 public static class EmojiTestFile {
-    /// <summary>The emoji version pinned for conformance. See fetch-emoji-corpus.ps1 for why.</summary>
-    public const string PinnedVersion = "16.0";
+    /// <summary>
+    /// The older list, a strict subset of the shipped data.
+    /// </summary>
+    /// <remarks>
+    /// Every emoji it names must resolve through the catalog. Safe to demand, because emoji are
+    /// never removed from Unicode, so everything in 16.0 is also in 17.0.
+    /// </remarks>
+    public const string SubsetVersion = "16.0";
 
-    /// <summary>Whether the conformance file has been fetched.</summary>
-    public static bool IsAvailable => Path is not null;
+    /// <summary>
+    /// The newer list, a strict superset of the shipped data.
+    /// </summary>
+    /// <remarks>
+    /// Every sequence the catalog ships must appear here. Using <see cref="SubsetVersion"/> for
+    /// this direction reports anything introduced after 16.0 as unknown to Unicode, which is a
+    /// false positive - and is exactly the mistake behind the retracted claim in SPEC 3.8.
+    /// </remarks>
+    public const string SupersetVersion = "18.0";
+
+    /// <summary>Whether both conformance files have been fetched.</summary>
+    public static bool IsAvailable => PathTo(SubsetVersion) is not null && PathTo(SupersetVersion) is not null;
 
     /// <summary>The reason to skip, or <see langword="null"/> when there is none.</summary>
     public static string? SkipReason => IsAvailable
         ? null
-        : $"emoji-test {PinnedVersion} not found. Run scripts/fetch-emoji-corpus.ps1.";
+        : "emoji-test conformance files not found. Run scripts/fetch-emoji-corpus.ps1.";
 
-    private static string? Path =>
-        EmojiCorpus.Root is { } root
-        && File.Exists(System.IO.Path.Combine(root, $"emoji-test-{PinnedVersion}.txt"))
-            ? System.IO.Path.Combine(root, $"emoji-test-{PinnedVersion}.txt")
-            : null;
+    private static string? PathTo(string version) {
+        if (EmojiCorpus.Root is not { } root) {
+            return null;
+        }
 
-    /// <summary>Reads every entry in the file.</summary>
-    public static ImmutableArray<EmojiTestEntry> Read() {
-        var path = Path ?? throw new InvalidOperationException(SkipReason);
+        var path = System.IO.Path.Combine(root, $"emoji-test-{version}.txt");
+
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>Reads every entry in one conformance file.</summary>
+    /// <param name="version"><see cref="SubsetVersion"/> or <see cref="SupersetVersion"/>.</param>
+    public static ImmutableArray<EmojiTestEntry> Read(string version) {
+        var path = PathTo(version) ?? throw new InvalidOperationException(SkipReason);
         var entries = ImmutableArray.CreateBuilder<EmojiTestEntry>();
 
         foreach (var line in File.ReadLines(path)) {

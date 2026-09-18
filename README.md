@@ -19,11 +19,11 @@ Working today:
 - Canonical display ordering, categories and subcategories
 - **No network access and no file I/O** — every language embedded in one 1.4 MB package
 - Synchronous API: there is no I/O to await
+- Skin-tone lookup, including the 19 emoji that take **two** tone modifiers
 - Trimming- and NativeAOT-compatible, with source-generated JSON
 
 Still to come:
 
-- Skin-tone lookup, including the 19 emoji that take **two** tone modifiers
 - Deterministic, diacritic-insensitive search with specified ranking
 - Shortcodes, and Hebrew generated from CLDR
 

@@ -161,19 +161,28 @@ Against 26.5 MB for the naive approach of embedding 28 full `data.json` files. T
 makes shipping every locale in the box practical, and it is why there is no download
 subsystem (§7).
 
-### 3.8 Some sequences are valid but not recommended
+### 3.8 Every shipped sequence is recommended by Unicode — retraction
 
-Emojibase supplies skin-tone variants that Unicode does **not** list as recommended for general
-interchange (RGI). Measured against `emoji-test.txt` 16.0: **150 variants across exactly 6
-emoji** — 👯 and 🤼, each in its neutral, men's and women's form, all 25 variants of each.
+An earlier version of this section claimed that 150 skin-tone variants across 6 emoji (👯 and 🤼)
+were valid but **not** recommended for general interchange, and asked Phase 3 to expose the
+distinction. **That was wrong**, and the error is worth recording because it is easy to repeat.
 
-The sequences are well-formed, but no platform is obliged to render them as a single glyph, so
-they may appear as the base emoji followed by a stray tone swatch. For a picker that is worse
-than not offering the tone at all.
+It came from comparing 17.0 data against `emoji-test.txt` **16.0**, the newest version Unicode
+publishes under `/Public/emoji/<version>/`. Anything introduced after 16.0 is naturally absent
+from a 16.0 file, so it looks unrecommended. Those variants were added to the recommended set in
+a later release.
 
-This is recorded rather than acted on: Phase 3 designs the skin-tone API and should expose the
-distinction there. It cannot be derived at run time, since it needs Unicode's RGI list, so it
-would have to be baked into the structure pack at generation time.
+Checked against `/Public/emoji/latest/` (18.0), a strict superset of the shipped data:
+**all 2030 skin-tone sequences are recommended, with no exceptions.** There is no distinction to
+expose and no RGI flag to ship.
+
+The conformance suite now uses both files deliberately — 16.0 for "everything Unicode lists must
+resolve" and 18.0 for "everything shipped must be defined" — because neither direction can be
+checked against the wrong one. A dedicated test pins the eight post-16.0 emoji so this particular
+mistake cannot recur silently.
+
+The one genuine exception remains the 26 regional indicators (§3.2), which Unicode lists only in
+pairs, as flags.
 
 ---
 
@@ -313,7 +322,8 @@ bool ok2 = catalog.TryGetSkin("🤝", SkinTone.Light, SkinTone.MediumLight, out 
 // single-modifier entry, not to a pair:
 bool ok3 = catalog.TryGetSkin("🤝", SkinTone.Light, out var both);          // "🤝🏻"
 bool ok4 = catalog.TryGetSkin("🤝", SkinTone.Light, SkinTone.Light, out var same);
-// ok3 and ok4 return the same record: (Light, Light) normalizes to the single-tone entry.
+// ok3 and ok4 return the same record: (Light, Light) normalizes to the single-tone entry, so a
+// caller can iterate a 5x5 grid and pass every cell without special-casing the diagonal.
 
 // Passing two tones to a one-slot emoji returns false. It does not throw and does not guess.
 ```
@@ -575,7 +585,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | 0 | ~~Spike~~ **Done** | Deserialize all 28 locales; prove the converters (§3.3) | ✅ 95 tests, every locale round-trips losslessly |
 | 1 | ~~Build pipeline~~ **Done** | Structure/string split, Brotli resources, `update-emoji-data` script | ✅ Bundle 1,360 KB; regeneration byte-reproducible |
 | 2 | ~~Model + catalog~~ **Done** | Records, indexes, normalization, locale metadata | ✅ conformance passes against `emoji-test.txt` |
-| 3 | Skin tones | 1- and 2-slot lookup by indexing published variants | All 19 dual-tone emoji resolve all 25 variants |
+| 3 | ~~Skin tones~~ **Done** | 1- and 2-slot lookup by indexing published variants | ✅ all 19 two-slot emoji resolve all 25 variants |
 | 4 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
 | 5 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |
 | 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |

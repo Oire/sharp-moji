@@ -13,21 +13,30 @@ namespace Oire.SharpMoji.Tests;
 /// tests use <c>emoji-test.txt</c>, published by Unicode, as an independent source.
 /// </para>
 /// <para>
-/// It is pinned to emoji 16.0 because there is no 17.0 file to match the data: Unicode publishes
-/// these under <c>/Public/emoji/&lt;version&gt;/</c>, which stops at 16.0, while <c>/latest/</c>
-/// is already 18.0. Since emoji are never removed from Unicode, 16.0 is a strict subset of the
-/// 17.0 data, and the tests below assert that relationship in both directions rather than
-/// pretending to an exact match.
+/// Two files are needed, because neither alone can check both directions. Unicode publishes these
+/// under <c>/Public/emoji/&lt;version&gt;/</c>, which stops at 16.0, while <c>/latest/</c> is
+/// already 18.0 — there is no 17.0 file matching the shipped data. So 16.0 is used as a subset
+/// (everything it lists must resolve) and 18.0 as a superset (everything shipped must be listed).
+/// </para>
+/// <para>
+/// Using the subset file for the superset direction is a trap worth naming: every emoji introduced
+/// after 16.0 then looks like something Unicode does not define. An earlier version of these tests
+/// did exactly that and concluded 150 skin-tone variants were outside Unicode's recommended set.
+/// They are not — they were simply added after 16.0.
 /// </para>
 /// </remarks>
 [Trait("Category", "Conformance")]
 public class ConformanceTests {
+    // ---------------------------------------------------------------------------------------
+    // Subset direction: everything the older list names must resolve.
+    // ---------------------------------------------------------------------------------------
+
     [SkippableFact]
     public void EveryFullyQualifiedSequence_ResolvesThroughTheCatalog() {
         Skip.IfNot(EmojiTestFile.IsAvailable, EmojiTestFile.SkipReason);
 
         var catalog = EmojiCatalog.English;
-        var missing = EmojiTestFile.Read()
+        var missing = EmojiTestFile.Read(EmojiTestFile.SubsetVersion)
             .Where(e => e.Status == EmojiQualification.FullyQualified)
             .Where(e => catalog.Find(e.Sequence) is null)
             .Select(e => $"{e.Sequence} {e.Hexcode} {e.Name}")
@@ -46,7 +55,7 @@ public class ConformanceTests {
         // A catalog keyed on the stored fully-qualified sequence would miss every one of them,
         // silently returning "no such emoji" for input the user can plainly see is an emoji.
         var catalog = EmojiCatalog.English;
-        var partial = EmojiTestFile.Read()
+        var partial = EmojiTestFile.Read(EmojiTestFile.SubsetVersion)
             .Where(e => e.Status is EmojiQualification.MinimallyQualified or EmojiQualification.Unqualified)
             .ToList();
 
@@ -69,9 +78,9 @@ public class ConformanceTests {
 
         // Resolving is not enough: both spellings must land on one record, or a picker would show
         // the same emoji twice and favorites saved under one spelling would not match the other.
-        var byHexcode = EmojiTestFile.Read()
+        var byHexcode = EmojiTestFile.Read(EmojiTestFile.SubsetVersion)
             .Where(e => e.Status != EmojiQualification.Component)
-            .GroupBy(e => e.Hexcode.Replace("-FE0F", string.Empty, StringComparison.Ordinal));
+            .GroupBy(e => Unqualify(e.Hexcode));
 
         var divergent = new List<string>();
 
@@ -86,17 +95,23 @@ public class ConformanceTests {
         divergent.Take(10).Should().BeEmpty("all spellings of one emoji must resolve to one record");
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Superset direction: everything shipped must be something Unicode defines.
+    // ---------------------------------------------------------------------------------------
+
     [SkippableFact]
     public void TheOnlyBaseEmoji_UnicodeDoesNotListAreRegionalIndicators() {
         Skip.IfNot(EmojiTestFile.IsAvailable, EmojiTestFile.SkipReason);
 
-        // The converse direction, which catches data the generator invented or mangled. It does not
-        // come out empty, and the exception is legitimate: Unicode's list contains regional
+        // This does not come out empty, and the exception is legitimate: Unicode lists regional
         // indicators only in pairs, as flags, never standalone. Emojibase carries the 26 letters
         // individually because they are the building blocks flags are made of.
         //
-        // Pinned rather than merely allowed, so that anything else appearing here fails.
-        var unlisted = Unlisted(EmojiCatalog.English.AllIncludingComponents.Where(e => e.UnicodeVersion <= 16.0));
+        // Pinned rather than merely allowed, so anything else appearing here fails.
+        var known = KnownSequences();
+        var unlisted = EmojiCatalog.English.AllIncludingComponents
+            .Where(e => !known.Contains(Unqualify(e.Hexcode)))
+            .ToList();
 
         unlisted.Should().HaveCount(26);
         unlisted.Should().OnlyContain(e => e.Label.StartsWith("regional indicator", StringComparison.Ordinal));
@@ -107,69 +122,41 @@ public class ConformanceTests {
     }
 
     [SkippableFact]
-    public void SomeSkinToneVariants_AreValidButNotRecommendedByUnicode() {
+    public void EverySkinToneVariant_IsASequenceUnicodeDefines() {
         Skip.IfNot(EmojiTestFile.IsAvailable, EmojiTestFile.SkipReason);
 
-        // Emojibase supplies skin-tone sequences for six emoji that Unicode does not recommend for
-        // general interchange. The sequences are well-formed, but a platform is under no obligation
-        // to render them as one glyph, so they may appear as the base emoji followed by a stray
-        // tone swatch.
-        //
-        // This matters for a picker: offering a tone that renders broken is worse than not
-        // offering it. Phase 3 should expose the distinction rather than hide it - see SPEC 5.3.
-        var catalog = EmojiCatalog.English;
-        var known = KnownHexcodes();
-
-        var affected = catalog.All
-            .Where(e => e.UnicodeVersion <= 16.0)
-            .Where(e => e.Skins.Any(s => !known.Contains(Unqualify(s.Hexcode))))
-            .ToList();
-
-        affected.Should().HaveCount(6, "the exception is narrow and should stay narrow");
-        affected.Should().OnlyContain(e =>
-            e.Label.Contains("bunny ears", StringComparison.Ordinal)
-            || e.Label.Contains("wrestling", StringComparison.Ordinal));
-
-        // Every affected emoji is affected wholly: all 25 of its variants are outside the
-        // recommended set, not some awkward subset.
-        affected.Should().OnlyContain(e => e.Skins.All(s => !known.Contains(Unqualify(s.Hexcode))));
-
-        var total = catalog.All.Where(e => e.UnicodeVersion <= 16.0).SelectMany(e => e.Skins)
-            .Count(s => !known.Contains(Unqualify(s.Hexcode)));
-
-        total.Should().Be(150, "6 emoji x 25 variants");
-    }
-
-    [SkippableFact]
-    public void EveryOtherSkinToneVariant_IsASequenceUnicodeDefines() {
-        Skip.IfNot(EmojiTestFile.IsAvailable, EmojiTestFile.SkipReason);
-
-        // With the six known exceptions set aside, every skin-tone sequence must be one Unicode
-        // actually defines. This is the part that would break first if anything ever composed tone
-        // sequences by inserting modifiers instead of using the published variants.
-        var known = KnownHexcodes();
-
+        // Every single one, with no exceptions. This is the test that would break first if anything
+        // ever composed tone sequences by inserting modifiers instead of using the published
+        // variants - which is precisely what SPEC 5.3 forbids.
+        var known = KnownSequences();
         var unknown = EmojiCatalog.English.All
-            .Where(e => e.UnicodeVersion <= 16.0)
-            .Where(e => !e.Label.Contains("bunny ears", StringComparison.Ordinal)
-                && !e.Label.Contains("wrestling", StringComparison.Ordinal))
             .SelectMany(e => e.Skins)
             .Where(s => !known.Contains(Unqualify(s.Hexcode)))
             .Select(s => $"{s.Sequence} {s.Hexcode} {s.Label}")
             .Take(20)
             .ToList();
 
-        unknown.Should().BeEmpty();
+        unknown.Should().BeEmpty("all 2030 skin-tone sequences are recommended by Unicode");
     }
 
-    private static List<Emoji> Unlisted(IEnumerable<Emoji> emoji) {
-        var known = KnownHexcodes();
+    [SkippableFact]
+    public void EmojiNewerThanTheSubsetFile_AreStillKnownToUnicode() {
+        Skip.IfNot(EmojiTestFile.IsAvailable, EmojiTestFile.SkipReason);
 
-        return [.. emoji.Where(e => !known.Contains(Unqualify(e.Hexcode)))];
+        // Guards the specific mistake this suite previously made. The eight emoji introduced after
+        // 16.0 are absent from the subset file but present in the superset one, and checking them
+        // against the wrong file is what manufactured a finding that did not exist.
+        var known = KnownSequences();
+        var newer = EmojiCatalog.English.All.Where(e => e.UnicodeVersion > 16.0).ToList();
+
+        newer.Should().NotBeEmpty("the shipped data is newer than the subset conformance file");
+        newer.Should().OnlyContain(e => known.Contains(Unqualify(e.Hexcode)));
     }
 
-    private static HashSet<string> KnownHexcodes() =>
-        EmojiTestFile.Read().Select(e => Unqualify(e.Hexcode)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private static HashSet<string> KnownSequences() =>
+        EmojiTestFile.Read(EmojiTestFile.SupersetVersion)
+            .Select(e => Unqualify(e.Hexcode))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Strips variation selectors, so the two spellings of a sequence compare equal.</summary>
     private static string Unqualify(string hexcode) =>

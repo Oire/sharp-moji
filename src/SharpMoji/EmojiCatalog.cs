@@ -144,6 +144,67 @@ public sealed class EmojiCatalog: IEmojiCatalog {
         return _bySubgroup.TryGetValue(subgroup.Key, out var emoji) ? emoji : [];
     }
 
+    /// <inheritdoc />
+    public int GetSkinToneSlots(string? sequence) {
+        if (Find(sequence) is not { } emoji || emoji.Skins.IsEmpty) {
+            return 0;
+        }
+
+        // Two slots exactly when some variant carries two tones. Counting modifiers in the sequence
+        // would be the obvious alternative and is wrong: a matching-tone variant of a two-person
+        // emoji carries only one modifier.
+        return emoji.Skins.Any(s => s.Tones.Length == 2) ? 2 : 1;
+    }
+
+    /// <inheritdoc />
+    public ImmutableArray<EmojiSkin> GetSkins(string? sequence) =>
+        Find(sequence) is { } emoji ? emoji.Skins : [];
+
+    /// <inheritdoc />
+    public bool TryGetSkin(string? sequence, SkinTone tone, out EmojiSkin? skin) {
+        skin = null;
+
+        if (tone == SkinTone.None || Find(sequence) is not { } emoji) {
+            return false;
+        }
+
+        // The single-modifier form, which means "everyone in this sequence, this tone". It exists
+        // for one-person and two-person emoji alike, which is why one overload serves both.
+        foreach (var candidate in emoji.Skins) {
+            if (candidate.Tones.Length == 1 && candidate.Tones[0] == tone) {
+                skin = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetSkin(string? sequence, SkinTone first, SkinTone second, out EmojiSkin? skin) {
+        // Matching tones are stored with one modifier, not as [tone, tone] - there is no such pair
+        // in the data. Normalizing here means a caller can iterate a 5x5 grid and pass every cell
+        // without having to know that the diagonal is encoded differently.
+        if (first == second) {
+            return TryGetSkin(sequence, first, out skin);
+        }
+
+        skin = null;
+
+        if (first == SkinTone.None || second == SkinTone.None || Find(sequence) is not { } emoji) {
+            return false;
+        }
+
+        foreach (var candidate in emoji.Skins) {
+            if (candidate.Tones.Length == 2 && candidate.Tones[0] == first && candidate.Tones[1] == second) {
+                skin = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static Emoji Build(
         PackEmoji packed,
         StringPack strings,
