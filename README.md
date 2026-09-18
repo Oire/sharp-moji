@@ -1,10 +1,16 @@
+﻿[![Build](https://github.com/Oire/sharp-moji/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Oire/sharp-moji/actions/workflows/dotnet.yml)
+[![codecov](https://codecov.io/gh/Oire/sharp-moji/graph/badge.svg)](https://codecov.io/gh/Oire/sharp-moji)
+[![NuGet](https://img.shields.io/nuget/v/Oire.SharpMoji)](https://www.nuget.org/packages/Oire.SharpMoji)
+[![Downloads](https://img.shields.io/nuget/dt/Oire.SharpMoji)](https://www.nuget.org/packages/Oire.SharpMoji)
+[![License](https://img.shields.io/github/license/Oire/sharp-moji)](https://github.com/Oire/sharp-moji/blob/master/LICENSE)
+
 # SharpMoji
 
 Emoji data for .NET: lookup, localized search, skin tones and canonical ordering — in 28
 languages, with no network access and no file I/O.
 
 > **Status: not yet released.** The API is complete and tested. Hebrew support and the 1.0
-> release are outstanding. See [the specification](docs/SPEC.md).
+> release are outstanding. See [the specification](https://github.com/Oire/sharp-moji/blob/master/docs/SPEC.md).
 
 SharpMoji is the data layer for Sourire (accessible emoji input) and a general-purpose emoji
 package for the .NET ecosystem.
@@ -99,7 +105,7 @@ EmojiLocale.All;                    // all 28, with English and native names
 ## Details that bite
 
 These are the things a naive emoji library gets wrong. Each is measured rather than assumed —
-the numbers are in [the specification](docs/SPEC.md).
+the numbers are in [the specification](https://github.com/Oire/sharp-moji/blob/master/docs/SPEC.md).
 
 - **Variation selectors.** 517 of 1949 records store a sequence ending in U+FE0F, while a pasted
   emoji usually does not. `Find` normalizes both sides, so two spellings that look identical
@@ -114,8 +120,8 @@ the numbers are in [the specification](docs/SPEC.md).
 
 ## Documentation
 
-- [Technical specification](docs/SPEC.md) — data model, API, measurements and design decisions
-- [Changelog](CHANGELOG.md)
+- [Technical specification](https://github.com/Oire/sharp-moji/blob/master/docs/SPEC.md) — data model, API, measurements and design decisions
+- [Changelog](https://github.com/Oire/sharp-moji/blob/master/CHANGELOG.md)
 
 ## Data source
 
@@ -125,10 +131,10 @@ building from source needs neither a network connection nor the upstream corpus.
 
 ## License
 
-Code is licensed under the [Apache License 2.0](LICENSE).
+Code is licensed under the [Apache License 2.0](https://github.com/Oire/sharp-moji/blob/master/LICENSE).
 
 Embedded emoji data is **not** covered by that license: it is MIT (Emojibase) and Unicode-3.0
-(CLDR). See [NOTICE](NOTICE) for the required attributions, which must accompany any
+(CLDR). See [NOTICE](https://github.com/Oire/sharp-moji/blob/master/NOTICE) for the required attributions, which must accompany any
 redistribution.
 
 ---
