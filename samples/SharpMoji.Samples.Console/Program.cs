@@ -71,6 +71,18 @@ foreach (var first in tones) {
 Console.WriteLine();
 Console.WriteLine($"Two-slot emoji: {english.All.Count(e => english.GetSkinToneSlots(e.Sequence) == 2)}");
 Console.WriteLine();
+Console.WriteLine("Shortcodes — the presets disagree, which is why they are selectable:");
+
+foreach (var preset in (ShortcodePreset[])[ShortcodePreset.Cldr, ShortcodePreset.GitHub, ShortcodePreset.Emojibase]) {
+    var codes = english.GetShortcodes("👍", preset);
+
+    Console.WriteLine($"  {preset,-12} {(codes.IsEmpty ? "(none)" : string.Join(", ", codes))}");
+}
+
+Console.WriteLine();
+Console.WriteLine("  \":+1:\" resolves to " + english.FindByShortcode(":+1:")?.Sequence);
+Console.WriteLine("  \":tm:\" resolves to " + english.FindByShortcode(":tm:")?.Sequence);
+Console.WriteLine();
 Console.WriteLine("Search arrives in a later phase — see docs/SPEC.md.");
 
 static string Describe(Emoji? emoji) =>

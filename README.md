@@ -14,7 +14,7 @@ and a general-purpose emoji package for the .NET ecosystem.
 
 Working today:
 
-- Lookup by sequence, hexcode or emoticon, tolerant of variation selectors
+- Lookup by sequence, hexcode, shortcode or emoticon, tolerant of variation selectors
 - Localized labels, tags and category names in 28 languages
 - Canonical display ordering, categories and subcategories
 - **No network access and no file I/O** — every language embedded in one 1.4 MB package
@@ -25,7 +25,7 @@ Working today:
 Still to come:
 
 - Deterministic, diacritic-insensitive search with specified ranking
-- Shortcodes, and Hebrew generated from CLDR
+- Hebrew, generated from CLDR
 
 ## Example
 

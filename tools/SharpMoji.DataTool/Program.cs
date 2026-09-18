@@ -58,10 +58,16 @@ var structureBytes = EmojiPackSerializer.Write(structure);
 
 File.WriteAllBytes(Path.Combine(output, "structure.br"), structureBytes);
 
+var shortcodes = PackGenerator.BuildShortcodes();
+var shortcodeBytes = EmojiPackSerializer.Write(shortcodes);
+
+File.WriteAllBytes(Path.Combine(output, "shortcodes.br"), shortcodeBytes);
+
 Console.WriteLine();
 Console.WriteLine($"  structure.br          {Kb(structureBytes.Length),10}   ({structure.Emoji.Length} emoji, shared by every language)");
+Console.WriteLine($"  shortcodes.br         {Kb(shortcodeBytes.Length),10}   ({shortcodes.Presets.Count} presets, shared by every language)");
 
-var total = (long)structureBytes.Length;
+var total = (long)structureBytes.Length + shortcodeBytes.Length;
 
 foreach (var locale in EmojiCorpus.Locales) {
     var strings = PackGenerator.BuildStrings(locale);

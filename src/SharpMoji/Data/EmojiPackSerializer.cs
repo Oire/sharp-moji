@@ -46,6 +46,10 @@ internal static class EmojiPackSerializer {
     public static byte[] Write(StringPack pack) =>
         Compress(JsonSerializer.SerializeToUtf8Bytes(pack, TypeInfo<StringPack>()));
 
+    /// <summary>Compresses the shared shortcode pack.</summary>
+    public static byte[] Write(ShortcodePack pack) =>
+        Compress(JsonSerializer.SerializeToUtf8Bytes(pack, TypeInfo<ShortcodePack>()));
+
     /// <summary>Decompresses and parses a structure pack.</summary>
     public static StructurePack ReadStructure(Stream compressed) =>
         JsonSerializer.Deserialize(Decompress(compressed), TypeInfo<StructurePack>())
@@ -55,6 +59,11 @@ internal static class EmojiPackSerializer {
     public static StringPack ReadStrings(Stream compressed) =>
         JsonSerializer.Deserialize(Decompress(compressed), TypeInfo<StringPack>())
         ?? throw new InvalidDataException("The string pack is empty or malformed.");
+
+    /// <summary>Decompresses and parses the shared shortcode pack.</summary>
+    public static ShortcodePack ReadShortcodes(Stream compressed) =>
+        JsonSerializer.Deserialize(Decompress(compressed), TypeInfo<ShortcodePack>())
+        ?? throw new InvalidDataException("The shortcode pack is empty or malformed.");
 
     private static byte[] Compress(byte[] json) {
         using var output = new MemoryStream();

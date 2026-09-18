@@ -84,6 +84,34 @@ internal static class PackGenerator {
         return $"{parts[0]}-{subtag}";
     }
 
+    /// <summary>
+    /// Builds the shared shortcode pack from the English presets.
+    /// </summary>
+    /// <remarks>
+    /// English only, deliberately. The seven English presets carry conventions that appear nowhere
+    /// else in the data — <c>:+1:</c>, <c>:tm:</c>, <c>:ok_hand:</c> — while the per-locale CLDR sets
+    /// are a transliteration and an underscored copy of the label, together 626 KB for capability
+    /// that search over labels and tags already provides. See <c>docs/SPEC.md</c> section 3.4.
+    /// </remarks>
+    public static ShortcodePack BuildShortcodes() {
+        var presets = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.Ordinal);
+
+        foreach (var preset in ShortcodeFile.EnglishPresets) {
+            var entries = ShortcodeFile.Read(CoreLocale, preset);
+
+            if (entries.Count > 0) {
+                presets[preset] = entries;
+            }
+        }
+
+        if (presets.Count == 0) {
+            throw new InvalidDataException(
+                "No shortcode presets were found. Run scripts/fetch-emoji-corpus.ps1.");
+        }
+
+        return new ShortcodePack { Presets = presets };
+    }
+
     /// <summary>Builds one language's string pack.</summary>
     public static StringPack BuildStrings(string locale) {
         var emoji = EmojiCorpus.Load(locale);

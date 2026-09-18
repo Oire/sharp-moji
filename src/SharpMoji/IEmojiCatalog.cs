@@ -68,6 +68,36 @@ public interface IEmojiCatalog {
     /// </remarks>
     Emoji? FindByHexcode(string? hexcode);
 
+    /// <summary>
+    /// Finds an emoji by shortcode, searching every preset.
+    /// </summary>
+    /// <param name="shortcode">
+    /// A shortcode such as <c>"thumbsup"</c>. Surrounding colons are optional, so <c>":+1:"</c>
+    /// works as well as <c>"+1"</c> — applications usually have the colons still attached.
+    /// </param>
+    /// <returns>The emoji, or <see langword="null"/> if no preset claims that shortcode.</returns>
+    /// <remarks>
+    /// Presets disagree, so searching all of them is the forgiving default for a picker. Pass a
+    /// preset explicitly when an application must match one vocabulary exactly — for instance when
+    /// round-tripping text that another tool will re-read.
+    /// </remarks>
+    Emoji? FindByShortcode(string? shortcode);
+
+    /// <summary>Finds an emoji by shortcode within one preset.</summary>
+    /// <param name="shortcode">A shortcode, with or without surrounding colons.</param>
+    /// <param name="preset">The vocabulary to search.</param>
+    /// <returns>The emoji, or <see langword="null"/> if that preset does not define it.</returns>
+    Emoji? FindByShortcode(string? shortcode, ShortcodePreset preset);
+
+    /// <summary>Returns an emoji's shortcodes in one preset.</summary>
+    /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>
+    /// <param name="preset">The vocabulary to read.</param>
+    /// <returns>
+    /// The shortcodes, without colons, or empty when that preset does not cover the emoji. Only
+    /// <see cref="ShortcodePreset.Cldr"/> covers all of them.
+    /// </returns>
+    ImmutableArray<string> GetShortcodes(string? sequence, ShortcodePreset preset = ShortcodePreset.Cldr);
+
     /// <summary>Finds an emoji by a text emoticon such as <c>":D"</c>.</summary>
     /// <param name="emoticon">The emoticon, matched exactly.</param>
     /// <returns>The emoji, or <see langword="null"/> if no emoji claims that emoticon.</returns>

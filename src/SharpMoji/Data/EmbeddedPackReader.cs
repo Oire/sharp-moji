@@ -23,6 +23,7 @@ namespace Oire.SharpMoji.Data;
 /// </remarks>
 internal static class EmbeddedPackReader {
     private const string StructureSuffix = ".structure.br";
+    private const string ShortcodeSuffix = ".shortcodes.br";
     private const string StringsMarker = ".strings.";
 
     private static Assembly PackAssembly => typeof(EmbeddedPackReader).Assembly;
@@ -40,6 +41,18 @@ internal static class EmbeddedPackReader {
         using var stream = PackAssembly.GetManifestResourceStream(name)!;
 
         return EmojiPackSerializer.ReadStructure(stream);
+    }
+
+    /// <summary>Loads the shared shortcode pack.</summary>
+    public static ShortcodePack ReadShortcodes() {
+        var name = PackAssembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith(ShortcodeSuffix, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException(
+                "The embedded shortcode pack is missing. Run scripts/update-emoji-data.ps1.");
+
+        using var stream = PackAssembly.GetManifestResourceStream(name)!;
+
+        return EmojiPackSerializer.ReadShortcodes(stream);
     }
 
     /// <summary>Loads one language's string pack.</summary>

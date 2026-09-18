@@ -114,8 +114,30 @@ keyed by hexcode. `en` has seven presets (`cldr`, `cldr-native`, `emojibase`,
 `emojibase-legacy`, `github`, `iamcal`, `joypixels`); every other locale has only `cldr`
 and `cldr-native`.
 
-This means shortcode support needs its own load path, its own cache, and a preset-selection
-API. Default preset is `cldr` — it is the only one present in all locales.
+This means shortcode support needs its own load path and a preset-selection API. Values are
+**string or array of string** — the fifth polymorphic field in this data, after `tone`,
+`emoticon`, `text` and `version`.
+
+**Only the English presets ship.** Measured Brotli cost of the alternatives:
+
+| | added | package |
+|---|---|---|
+| English presets (all 7) | **59 KB** | 1,419 KB |
+| plus romanized `cldr`, 28 locales | 626 KB | 1,986 KB |
+| plus `cldr-native` too | 1,003 KB | 2,363 KB |
+
+The English sets carry conventions that appear in no label or tag — `:+1:`, `:tm:`, `:ok_hand:`
+— so they are not derivable. The per-locale sets are: `cldr-native` is each label lowercased with
+underscores, which search over labels already matches, and `cldr` is CLDR's mechanical
+transliteration (`veliki_palci_vgoru`), which nobody has internalized. Adding them later is a
+minor version bump; removing them would be breaking, so the smaller set ships first.
+
+Shortcodes are shared across languages rather than per locale, because `:+1:` is a convention
+rather than English — a Ukrainian application still wants it to resolve.
+
+`cldr-native` is a **diacritic overlay**, not a vocabulary: for English it holds exactly the eight
+names whose accents plain `cldr` strips (`flag_turkiye` → `flag_türkiye`). Callers must fall back
+to `Cldr`, which is the only preset covering every emoji and therefore the default.
 
 ### 3.5 Groups are localized integers
 
@@ -586,7 +608,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | 1 | ~~Build pipeline~~ **Done** | Structure/string split, Brotli resources, `update-emoji-data` script | ✅ Bundle 1,360 KB; regeneration byte-reproducible |
 | 2 | ~~Model + catalog~~ **Done** | Records, indexes, normalization, locale metadata | ✅ conformance passes against `emoji-test.txt` |
 | 3 | ~~Skin tones~~ **Done** | 1- and 2-slot lookup by indexing published variants | ✅ all 19 two-slot emoji resolve all 25 variants |
-| 4 | Groups + shortcodes | Localized `messages.json`, preset loading | `uk` returns Ukrainian group labels |
+| 4 | ~~Groups + shortcodes~~ **Done** | Localized `messages.json`, preset loading | ✅ `uk` returns Ukrainian group labels; 7 presets embedded |
 | 5 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |
 | 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |
 | 7 | Package | README, XML docs, sample, NOTICE, CI, satellite package | Trimmed + AOT sample runs on 3 OSes |
@@ -649,7 +671,7 @@ quality, and download counts are mostly CI. Replaced with:
 - `emoji-test.txt` conformance: 100%, all 29 locales load.
 - Search golden corpus passes for `en`, `fr`, `uk`, `ru`.
 - Trimmed and NativeAOT samples run on Windows, macOS, Linux.
-- Embedded data under 1.6 MB (currently 1,360 KB).
+- Embedded data under 1.6 MB (currently 1,419 KB).
 - Zero analyzer warnings with `TreatWarningsAsErrors`.
 - Public API reviewed and frozen via `PublicApiAnalyzers`.
 

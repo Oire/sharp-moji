@@ -18,4 +18,5 @@ namespace Oire.SharpMoji.Data;
     GenerationMode = JsonSourceGenerationMode.Default)]
 [JsonSerializable(typeof(StructurePack))]
 [JsonSerializable(typeof(StringPack))]
+[JsonSerializable(typeof(ShortcodePack))]
 internal sealed partial class EmojiPackJsonContext: JsonSerializerContext;

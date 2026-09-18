@@ -127,6 +127,51 @@ public sealed class EmojiCatalog: IEmojiCatalog {
         string.IsNullOrWhiteSpace(hexcode) ? null : _byHexcode.Find(hexcode.Trim());
 
     /// <inheritdoc />
+    public Emoji? FindByShortcode(string? shortcode) {
+        if (Normalize(shortcode) is not { } normalized) {
+            return null;
+        }
+
+        // Presets are searched in declaration order, so Cldr wins a disagreement. It is the only
+        // preset covering every emoji, which makes it the least surprising tie-breaker.
+        foreach (var preset in ShortcodeIndex.Presets) {
+            if (ShortcodeIndex.Find(preset, normalized) is { } hexcode && FindByHexcode(hexcode) is { } emoji) {
+                return emoji;
+            }
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc />
+    public Emoji? FindByShortcode(string? shortcode, ShortcodePreset preset) =>
+        Normalize(shortcode) is { } normalized
+        && ShortcodeIndex.Find(preset, normalized) is { } hexcode
+            ? FindByHexcode(hexcode)
+            : null;
+
+    /// <inheritdoc />
+    public ImmutableArray<string> GetShortcodes(string? sequence, ShortcodePreset preset = ShortcodePreset.Cldr) =>
+        Find(sequence) is { } emoji ? ShortcodeIndex.For(preset, emoji.Hexcode) : [];
+
+    /// <summary>
+    /// Strips the colons applications usually leave attached, and lowercases.
+    /// </summary>
+    /// <remarks>
+    /// Text being scanned for emoji arrives as <c>":+1:"</c>, not <c>"+1"</c>. Requiring callers to
+    /// trim first would make the common case the awkward one.
+    /// </remarks>
+    private static string? Normalize(string? shortcode) {
+        if (string.IsNullOrWhiteSpace(shortcode)) {
+            return null;
+        }
+
+        var trimmed = shortcode.Trim().Trim(':');
+
+        return trimmed.Length == 0 ? null : trimmed;
+    }
+
+    /// <inheritdoc />
     public Emoji? FindByEmoticon(string? emoticon) =>
         string.IsNullOrWhiteSpace(emoticon) ? null : _byEmoticon.Find(emoticon);
 

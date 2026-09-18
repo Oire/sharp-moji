@@ -9,7 +9,7 @@ namespace Oire.SharpMoji.Data;
 /// <para>
 /// All 28 Emojibase locales carry byte-identical structure and differ only in labels and tags
 /// (<c>docs/SPEC.md</c> section 3.7). Storing it once instead of 28 times is what brings the
-/// complete bundle from 26.5 MB down to 1,360 KB, and is why SharpMoji can embed every language
+/// complete bundle from 26.5 MB down to well under 1.5 MB, and is why SharpMoji can embed every language
 /// rather than downloading any.
 /// </para>
 /// <para>
@@ -135,6 +135,27 @@ internal sealed class PackSkin {
     [JsonPropertyName("gd")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Gender { get; init; }
+}
+
+/// <summary>
+/// Shortcodes, keyed by preset and then by hexcode.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Shared across languages rather than shipped per locale, because the conventions people type —
+/// <c>:+1:</c>, <c>:tm:</c>, <c>:ok_hand:</c> — are not really English so much as universal, and a
+/// Ukrainian application still wants them to work.
+/// </para>
+/// <para>
+/// The per-locale CLDR sets are deliberately not shipped. <c>cldr-native</c> is each label
+/// lowercased with underscores, which search over labels already matches, and <c>cldr</c> is a
+/// mechanical transliteration nobody has internalized — together 626 KB for very little. See
+/// <c>docs/SPEC.md</c> section 3.4.
+/// </para>
+/// </remarks>
+internal sealed class ShortcodePack {
+    [JsonPropertyName("p")]
+    public required Dictionary<string, Dictionary<string, string[]>> Presets { get; init; }
 }
 
 /// <summary>
