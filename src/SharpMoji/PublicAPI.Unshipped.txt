@@ -1,0 +1,199 @@
+#nullable enable
+Oire.SharpMoji.Emoji
+Oire.SharpMoji.Emoji.<Clone>$() -> Oire.SharpMoji.Emoji!
+Oire.SharpMoji.Emoji.Emoji() -> void
+Oire.SharpMoji.Emoji.Emoticons.get -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.Emoji.Emoticons.init -> void
+Oire.SharpMoji.Emoji.Equals(Oire.SharpMoji.Emoji? other) -> bool
+Oire.SharpMoji.Emoji.Gender.get -> Oire.SharpMoji.EmojiGender?
+Oire.SharpMoji.Emoji.Gender.init -> void
+Oire.SharpMoji.Emoji.Group.get -> Oire.SharpMoji.EmojiGroup?
+Oire.SharpMoji.Emoji.Group.init -> void
+Oire.SharpMoji.Emoji.Hexcode.get -> string!
+Oire.SharpMoji.Emoji.Hexcode.init -> void
+Oire.SharpMoji.Emoji.Label.get -> string!
+Oire.SharpMoji.Emoji.Label.init -> void
+Oire.SharpMoji.Emoji.Order.get -> int?
+Oire.SharpMoji.Emoji.Order.init -> void
+Oire.SharpMoji.Emoji.Presentation.get -> Oire.SharpMoji.EmojiPresentation
+Oire.SharpMoji.Emoji.Presentation.init -> void
+Oire.SharpMoji.Emoji.Sequence.get -> string!
+Oire.SharpMoji.Emoji.Sequence.init -> void
+Oire.SharpMoji.Emoji.Skins.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiSkin!>
+Oire.SharpMoji.Emoji.Skins.init -> void
+Oire.SharpMoji.Emoji.Subgroup.get -> Oire.SharpMoji.EmojiSubgroup?
+Oire.SharpMoji.Emoji.Subgroup.init -> void
+Oire.SharpMoji.Emoji.SupportsSkinTones.get -> bool
+Oire.SharpMoji.Emoji.Tags.get -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.Emoji.Tags.init -> void
+Oire.SharpMoji.Emoji.TextSequence.get -> string?
+Oire.SharpMoji.Emoji.TextSequence.init -> void
+Oire.SharpMoji.Emoji.UnicodeVersion.get -> double
+Oire.SharpMoji.Emoji.UnicodeVersion.init -> void
+Oire.SharpMoji.EmojiCatalog
+Oire.SharpMoji.EmojiCatalog.All.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.EmojiCatalog.AllIncludingComponents.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.EmojiCatalog.Find(string? sequence) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.EmojiCatalog.FindByEmoticon(string? emoticon) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.EmojiCatalog.FindByHexcode(string? hexcode) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.EmojiCatalog.FindByShortcode(string? shortcode) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.EmojiCatalog.FindByShortcode(string? shortcode, Oire.SharpMoji.ShortcodePreset preset) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.EmojiCatalog.GetByGroup(Oire.SharpMoji.EmojiGroup! group) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.EmojiCatalog.GetBySubgroup(Oire.SharpMoji.EmojiSubgroup! subgroup) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.EmojiCatalog.GetShortcodes(string? sequence, Oire.SharpMoji.ShortcodePreset preset = Oire.SharpMoji.ShortcodePreset.Cldr) -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.EmojiCatalog.GetSkinToneSlots(string? sequence) -> int
+Oire.SharpMoji.EmojiCatalog.GetSkins(string? sequence) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiSkin!>
+Oire.SharpMoji.EmojiCatalog.Groups.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiGroup!>
+Oire.SharpMoji.EmojiCatalog.Locale.get -> Oire.SharpMoji.EmojiLocale!
+Oire.SharpMoji.EmojiCatalog.Search(string? query, int limit = 25) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiMatch!>
+Oire.SharpMoji.EmojiCatalog.SkinToneNames.get -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.EmojiCatalog.Subgroups.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiSubgroup!>
+Oire.SharpMoji.EmojiCatalog.TryGetSkin(string? sequence, Oire.SharpMoji.SkinTone first, Oire.SharpMoji.SkinTone second, out Oire.SharpMoji.EmojiSkin? skin) -> bool
+Oire.SharpMoji.EmojiCatalog.TryGetSkin(string? sequence, Oire.SharpMoji.SkinTone tone, out Oire.SharpMoji.EmojiSkin? skin) -> bool
+Oire.SharpMoji.EmojiGender
+Oire.SharpMoji.EmojiGender.Female = 0 -> Oire.SharpMoji.EmojiGender
+Oire.SharpMoji.EmojiGender.Male = 1 -> Oire.SharpMoji.EmojiGender
+Oire.SharpMoji.EmojiGroup
+Oire.SharpMoji.EmojiGroup.<Clone>$() -> Oire.SharpMoji.EmojiGroup!
+Oire.SharpMoji.EmojiGroup.EmojiGroup() -> void
+Oire.SharpMoji.EmojiGroup.Equals(Oire.SharpMoji.EmojiGroup? other) -> bool
+Oire.SharpMoji.EmojiGroup.Index.get -> int
+Oire.SharpMoji.EmojiGroup.Index.init -> void
+Oire.SharpMoji.EmojiGroup.IsComponent.get -> bool
+Oire.SharpMoji.EmojiGroup.Key.get -> string!
+Oire.SharpMoji.EmojiGroup.Key.init -> void
+Oire.SharpMoji.EmojiGroup.Name.get -> string!
+Oire.SharpMoji.EmojiGroup.Name.init -> void
+Oire.SharpMoji.EmojiLocale
+Oire.SharpMoji.EmojiLocale.<Clone>$() -> Oire.SharpMoji.EmojiLocale!
+Oire.SharpMoji.EmojiLocale.Code.get -> string!
+Oire.SharpMoji.EmojiLocale.Code.init -> void
+Oire.SharpMoji.EmojiLocale.EmojiLocale() -> void
+Oire.SharpMoji.EmojiLocale.EnglishName.get -> string!
+Oire.SharpMoji.EmojiLocale.EnglishName.init -> void
+Oire.SharpMoji.EmojiLocale.Equals(Oire.SharpMoji.EmojiLocale? other) -> bool
+Oire.SharpMoji.EmojiLocale.IsRightToLeft.get -> bool
+Oire.SharpMoji.EmojiLocale.IsRightToLeft.init -> void
+Oire.SharpMoji.EmojiLocale.NativeName.get -> string!
+Oire.SharpMoji.EmojiLocale.NativeName.init -> void
+Oire.SharpMoji.EmojiMatch
+Oire.SharpMoji.EmojiMatch.<Clone>$() -> Oire.SharpMoji.EmojiMatch!
+Oire.SharpMoji.EmojiMatch.Emoji.get -> Oire.SharpMoji.Emoji!
+Oire.SharpMoji.EmojiMatch.Emoji.init -> void
+Oire.SharpMoji.EmojiMatch.EmojiMatch() -> void
+Oire.SharpMoji.EmojiMatch.Equals(Oire.SharpMoji.EmojiMatch? other) -> bool
+Oire.SharpMoji.EmojiMatch.Kind.get -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.EmojiMatch.Kind.init -> void
+Oire.SharpMoji.EmojiMatch.MatchedText.get -> string!
+Oire.SharpMoji.EmojiMatch.MatchedText.init -> void
+Oire.SharpMoji.EmojiPresentation
+Oire.SharpMoji.EmojiPresentation.Emoji = 1 -> Oire.SharpMoji.EmojiPresentation
+Oire.SharpMoji.EmojiPresentation.Text = 0 -> Oire.SharpMoji.EmojiPresentation
+Oire.SharpMoji.EmojiSkin
+Oire.SharpMoji.EmojiSkin.<Clone>$() -> Oire.SharpMoji.EmojiSkin!
+Oire.SharpMoji.EmojiSkin.EmojiSkin() -> void
+Oire.SharpMoji.EmojiSkin.Equals(Oire.SharpMoji.EmojiSkin? other) -> bool
+Oire.SharpMoji.EmojiSkin.Gender.get -> Oire.SharpMoji.EmojiGender?
+Oire.SharpMoji.EmojiSkin.Gender.init -> void
+Oire.SharpMoji.EmojiSkin.Hexcode.get -> string!
+Oire.SharpMoji.EmojiSkin.Hexcode.init -> void
+Oire.SharpMoji.EmojiSkin.Label.get -> string!
+Oire.SharpMoji.EmojiSkin.Label.init -> void
+Oire.SharpMoji.EmojiSkin.Order.get -> int
+Oire.SharpMoji.EmojiSkin.Order.init -> void
+Oire.SharpMoji.EmojiSkin.Sequence.get -> string!
+Oire.SharpMoji.EmojiSkin.Sequence.init -> void
+Oire.SharpMoji.EmojiSkin.Tones.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.SkinTone>
+Oire.SharpMoji.EmojiSkin.Tones.init -> void
+Oire.SharpMoji.EmojiSubgroup
+Oire.SharpMoji.EmojiSubgroup.<Clone>$() -> Oire.SharpMoji.EmojiSubgroup!
+Oire.SharpMoji.EmojiSubgroup.EmojiSubgroup() -> void
+Oire.SharpMoji.EmojiSubgroup.Equals(Oire.SharpMoji.EmojiSubgroup? other) -> bool
+Oire.SharpMoji.EmojiSubgroup.Index.get -> int
+Oire.SharpMoji.EmojiSubgroup.Index.init -> void
+Oire.SharpMoji.EmojiSubgroup.Key.get -> string!
+Oire.SharpMoji.EmojiSubgroup.Key.init -> void
+Oire.SharpMoji.EmojiSubgroup.Name.get -> string!
+Oire.SharpMoji.EmojiSubgroup.Name.init -> void
+Oire.SharpMoji.IEmojiCatalog
+Oire.SharpMoji.IEmojiCatalog.All.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.IEmojiCatalog.AllIncludingComponents.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.IEmojiCatalog.Find(string? sequence) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.IEmojiCatalog.FindByEmoticon(string? emoticon) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.IEmojiCatalog.FindByHexcode(string? hexcode) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.IEmojiCatalog.FindByShortcode(string? shortcode) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.IEmojiCatalog.FindByShortcode(string? shortcode, Oire.SharpMoji.ShortcodePreset preset) -> Oire.SharpMoji.Emoji?
+Oire.SharpMoji.IEmojiCatalog.GetByGroup(Oire.SharpMoji.EmojiGroup! group) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.IEmojiCatalog.GetBySubgroup(Oire.SharpMoji.EmojiSubgroup! subgroup) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.Emoji!>
+Oire.SharpMoji.IEmojiCatalog.GetShortcodes(string? sequence, Oire.SharpMoji.ShortcodePreset preset = Oire.SharpMoji.ShortcodePreset.Cldr) -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.IEmojiCatalog.GetSkinToneSlots(string? sequence) -> int
+Oire.SharpMoji.IEmojiCatalog.GetSkins(string? sequence) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiSkin!>
+Oire.SharpMoji.IEmojiCatalog.Groups.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiGroup!>
+Oire.SharpMoji.IEmojiCatalog.Locale.get -> Oire.SharpMoji.EmojiLocale!
+Oire.SharpMoji.IEmojiCatalog.Search(string? query, int limit = 25) -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiMatch!>
+Oire.SharpMoji.IEmojiCatalog.SkinToneNames.get -> System.Collections.Immutable.ImmutableArray<string!>
+Oire.SharpMoji.IEmojiCatalog.Subgroups.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiSubgroup!>
+Oire.SharpMoji.IEmojiCatalog.TryGetSkin(string? sequence, Oire.SharpMoji.SkinTone first, Oire.SharpMoji.SkinTone second, out Oire.SharpMoji.EmojiSkin? skin) -> bool
+Oire.SharpMoji.IEmojiCatalog.TryGetSkin(string? sequence, Oire.SharpMoji.SkinTone tone, out Oire.SharpMoji.EmojiSkin? skin) -> bool
+Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.Emoticon = 1 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.Label = 2 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.LabelPrefix = 4 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.LabelSubstring = 5 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.Shortcode = 0 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.Tag = 3 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.MatchKind.TagSubstring = 6 -> Oire.SharpMoji.MatchKind
+Oire.SharpMoji.SharpMojiData
+Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.Cldr = 0 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.CldrNative = 1 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.Emojibase = 2 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.EmojibaseLegacy = 3 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.GitHub = 4 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.Iamcal = 5 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.ShortcodePreset.JoyPixels = 6 -> Oire.SharpMoji.ShortcodePreset
+Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.Dark = 5 -> Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.Light = 1 -> Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.Medium = 3 -> Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.MediumDark = 4 -> Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.MediumLight = 2 -> Oire.SharpMoji.SkinTone
+Oire.SharpMoji.SkinTone.None = 0 -> Oire.SharpMoji.SkinTone
+override Oire.SharpMoji.Emoji.Equals(object? obj) -> bool
+override Oire.SharpMoji.Emoji.GetHashCode() -> int
+override Oire.SharpMoji.Emoji.ToString() -> string!
+override Oire.SharpMoji.EmojiGroup.Equals(object? obj) -> bool
+override Oire.SharpMoji.EmojiGroup.GetHashCode() -> int
+override Oire.SharpMoji.EmojiGroup.ToString() -> string!
+override Oire.SharpMoji.EmojiLocale.Equals(object? obj) -> bool
+override Oire.SharpMoji.EmojiLocale.GetHashCode() -> int
+override Oire.SharpMoji.EmojiLocale.ToString() -> string!
+override Oire.SharpMoji.EmojiMatch.Equals(object? obj) -> bool
+override Oire.SharpMoji.EmojiMatch.GetHashCode() -> int
+override Oire.SharpMoji.EmojiMatch.ToString() -> string!
+override Oire.SharpMoji.EmojiSkin.Equals(object? obj) -> bool
+override Oire.SharpMoji.EmojiSkin.GetHashCode() -> int
+override Oire.SharpMoji.EmojiSkin.ToString() -> string!
+override Oire.SharpMoji.EmojiSubgroup.Equals(object? obj) -> bool
+override Oire.SharpMoji.EmojiSubgroup.GetHashCode() -> int
+override Oire.SharpMoji.EmojiSubgroup.ToString() -> string!
+static Oire.SharpMoji.Emoji.operator !=(Oire.SharpMoji.Emoji? left, Oire.SharpMoji.Emoji? right) -> bool
+static Oire.SharpMoji.Emoji.operator ==(Oire.SharpMoji.Emoji? left, Oire.SharpMoji.Emoji? right) -> bool
+static Oire.SharpMoji.EmojiCatalog.English.get -> Oire.SharpMoji.EmojiCatalog!
+static Oire.SharpMoji.EmojiCatalog.Load(string! locale) -> Oire.SharpMoji.EmojiCatalog!
+static Oire.SharpMoji.EmojiCatalog.TryLoad(string? locale, out Oire.SharpMoji.EmojiCatalog? catalog) -> bool
+static Oire.SharpMoji.EmojiGroup.operator !=(Oire.SharpMoji.EmojiGroup? left, Oire.SharpMoji.EmojiGroup? right) -> bool
+static Oire.SharpMoji.EmojiGroup.operator ==(Oire.SharpMoji.EmojiGroup? left, Oire.SharpMoji.EmojiGroup? right) -> bool
+static Oire.SharpMoji.EmojiLocale.All.get -> System.Collections.Immutable.ImmutableArray<Oire.SharpMoji.EmojiLocale!>
+static Oire.SharpMoji.EmojiLocale.Find(string? code) -> Oire.SharpMoji.EmojiLocale?
+static Oire.SharpMoji.EmojiLocale.operator !=(Oire.SharpMoji.EmojiLocale? left, Oire.SharpMoji.EmojiLocale? right) -> bool
+static Oire.SharpMoji.EmojiLocale.operator ==(Oire.SharpMoji.EmojiLocale? left, Oire.SharpMoji.EmojiLocale? right) -> bool
+static Oire.SharpMoji.EmojiMatch.operator !=(Oire.SharpMoji.EmojiMatch? left, Oire.SharpMoji.EmojiMatch? right) -> bool
+static Oire.SharpMoji.EmojiMatch.operator ==(Oire.SharpMoji.EmojiMatch? left, Oire.SharpMoji.EmojiMatch? right) -> bool
+static Oire.SharpMoji.EmojiSkin.operator !=(Oire.SharpMoji.EmojiSkin? left, Oire.SharpMoji.EmojiSkin? right) -> bool
+static Oire.SharpMoji.EmojiSkin.operator ==(Oire.SharpMoji.EmojiSkin? left, Oire.SharpMoji.EmojiSkin? right) -> bool
+static Oire.SharpMoji.EmojiSubgroup.operator !=(Oire.SharpMoji.EmojiSubgroup? left, Oire.SharpMoji.EmojiSubgroup? right) -> bool
+static Oire.SharpMoji.EmojiSubgroup.operator ==(Oire.SharpMoji.EmojiSubgroup? left, Oire.SharpMoji.EmojiSubgroup? right) -> bool
+static readonly Oire.SharpMoji.SharpMojiData.EmojiCount -> int
+static readonly Oire.SharpMoji.SharpMojiData.EmojibaseVersion -> string!
+static readonly Oire.SharpMoji.SharpMojiData.UnicodeVersion -> string!

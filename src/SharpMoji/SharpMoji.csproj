@@ -71,6 +71,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
     <None Include="../../icon.png" Pack="true" PackagePath="\" />
     <!-- The package embeds CLDR-derived emoji data, so the third-party attributions must travel with
@@ -92,6 +97,12 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="GitVersion.MsBuild" Version="6.8.2">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Makes every change to the public surface a reviewed diff in PublicAPI.*.txt rather than
+         something that slips out in a release. A ship gate from docs/SPEC.md section 12. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="4.14.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />

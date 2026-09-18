@@ -5,6 +5,12 @@ namespace Oire.SharpMoji;
 /// </summary>
 /// <remarks>
 /// <para>
+/// These are <c>static readonly</c> rather than <c>const</c> on purpose. A C# <c>const</c> is
+/// copied into the consuming assembly at compile time, so an application that upgraded SharpMoji
+/// without recompiling would keep reporting the version it was built against — exactly wrong for
+/// a value whose whole job is to say which data is loaded.
+/// </para>
+/// <para>
 /// SharpMoji carries its data rather than downloading it, so the dataset is fixed for a given
 /// package version. An application can surface or log these values to report exactly which
 /// emoji it knows about.
@@ -19,12 +25,12 @@ public static class SharpMojiData {
     /// The <see href="https://github.com/milesj/emojibase">Emojibase</see> release the embedded
     /// data was generated from.
     /// </summary>
-    public const string EmojibaseVersion = "17.0.0";
+    public static readonly string EmojibaseVersion = "17.0.0";
 
     /// <summary>
     /// The Unicode emoji version covered by the embedded data.
     /// </summary>
-    public const string UnicodeVersion = "17.0";
+    public static readonly string UnicodeVersion = "17.0";
 
     /// <summary>
     /// The number of base emoji records in the dataset, excluding skin-tone variants.
@@ -33,5 +39,5 @@ public static class SharpMojiData {
     /// Identical for every locale: emoji structure does not vary by language, only labels and
     /// tags do. See <c>docs/SPEC.md</c> section 3.7.
     /// </remarks>
-    public const int EmojiCount = 1949;
+    public static readonly int EmojiCount = 1949;
 }

@@ -77,6 +77,13 @@ jobs:
     # Trim and AOT publishing are ship gates, not nice-to-haves: the library promises to work in
     # a trimmed desktop app. A reflection-based serializer call would break these steps, which is
     # the point of running them on every push.
+    # NativeAOT shells out to a native toolchain. clang is present on the Ubuntu image but the
+    # zlib headers are not always, and the failure it produces names a linker error rather than a
+    # missing package, which is a poor way to spend an afternoon.
+    - name: Install NativeAOT prerequisites
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
     - name: Publish trimmed
       run: dotnet publish samples/SharpMoji.Samples.Console -c Release -p:PublishTrimmed=true
 

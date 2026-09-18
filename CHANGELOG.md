@@ -30,6 +30,7 @@ Emoji data updates are additive and do not change the API, so a new Unicode rele
 - Skin-tone lookup: `GetSkinToneSlots`, `GetSkins` and `TryGetSkin` for one tone or two, covering
   the 19 emoji whose two people are toned independently. Matching tones resolve to the
   single-modifier variant, so a caller can pass every cell of a 5x5 grid without special cases.
+- Public API frozen with `PublicApiAnalyzers`, so every surface change is a reviewed diff.
 - Conformance tests against Unicode's own `emoji-test.txt`, checked in both directions
   against the two published versions that can each answer one of them.
 

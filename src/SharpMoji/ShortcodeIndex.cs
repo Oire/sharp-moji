@@ -45,22 +45,16 @@ internal static class ShortcodeIndex {
             ? table.GetValueOrDefault(hexcode, [])
             : [];
 
-    /// <summary>The presets actually present in the embedded data.</summary>
-    public static ImmutableArray<ShortcodePreset> Available => Loaded.Value.Available;
-
     private static Tables Build() {
         var pack = EmbeddedPackReader.ReadShortcodes();
 
         var byShortcode = new Dictionary<ShortcodePreset, FrozenDictionary<string, string>>();
         var byHexcode = new Dictionary<ShortcodePreset, FrozenDictionary<string, ImmutableArray<string>>>();
-        var available = ImmutableArray.CreateBuilder<ShortcodePreset>();
 
         foreach (var (name, entries) in pack.Presets) {
             if (ParsePreset(name) is not { } preset) {
                 continue;
             }
-
-            available.Add(preset);
 
             var forward = new Dictionary<string, ImmutableArray<string>>(entries.Count, StringComparer.OrdinalIgnoreCase);
             var reverse = new Dictionary<string, string>(entries.Count, StringComparer.OrdinalIgnoreCase);
@@ -80,10 +74,7 @@ internal static class ShortcodeIndex {
             byShortcode[preset] = reverse.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
         }
 
-        return new Tables(
-            byShortcode.ToFrozenDictionary(),
-            byHexcode.ToFrozenDictionary(),
-            [.. available.Order()]);
+        return new Tables(byShortcode.ToFrozenDictionary(), byHexcode.ToFrozenDictionary());
     }
 
     private static ShortcodePreset? ParsePreset(string name) => name switch {
@@ -99,6 +90,5 @@ internal static class ShortcodeIndex {
 
     private sealed record Tables(
         FrozenDictionary<ShortcodePreset, FrozenDictionary<string, string>> ByShortcode,
-        FrozenDictionary<ShortcodePreset, FrozenDictionary<string, ImmutableArray<string>>> ByHexcode,
-        ImmutableArray<ShortcodePreset> Available);
+        FrozenDictionary<ShortcodePreset, FrozenDictionary<string, ImmutableArray<string>>> ByHexcode);
 }

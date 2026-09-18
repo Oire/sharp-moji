@@ -629,8 +629,8 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | 3 | ~~Skin tones~~ **Done** | 1- and 2-slot lookup by indexing published variants | ✅ all 19 two-slot emoji resolve all 25 variants |
 | 4 | ~~Groups + shortcodes~~ **Done** | Localized `messages.json`, preset loading | ✅ `uk` returns Ukrainian group labels; 7 presets embedded |
 | 5 | ~~Search~~ **Done** | Index, ranking, diacritic folding | ✅ golden corpus passes for `en`, `fr`, `de`, `uk`, `ru` |
-| 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |
-| 7 | Package | README, XML docs, sample, NOTICE, CI, satellite package | Trimmed + AOT sample runs on 3 OSes |
+| 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | **Deferred** — see §14 |
+| 7 | ~~Package~~ **Done** | README, XML docs, sample, NOTICE, CI, frozen public API | ✅ 1,494 KB package; trimmed + AOT verified |
 
 Phase 0 is half a day and would have prevented most of this rewrite. It has now run, and earned
 its place: it found a fourth polymorphic field (`emoticon`), a `gender` field on skins as well as
@@ -692,7 +692,10 @@ quality, and download counts are mostly CI. Replaced with:
 - Trimmed and NativeAOT samples run on Windows, macOS, Linux.
 - Embedded data under 1.6 MB (currently 1,419 KB).
 - Zero analyzer warnings with `TreatWarningsAsErrors`.
-- Public API reviewed and frozen via `PublicApiAnalyzers`.
+- Public API reviewed and frozen via `PublicApiAnalyzers` — 14 public types, 198 entries in
+  `PublicAPI.Unshipped.txt`. Reviewing it caught a real bug: the version metadata was `const`,
+  which C# copies into the consumer's assembly, so an application that upgraded without
+  recompiling would report the old data version forever. Now `static readonly`.
 
 **Post-release**
 - Sourire depends on the published package with no `InternalsVisibleTo` and no forked code.
@@ -730,7 +733,26 @@ reused rather than rewritten.
 
 ---
 
-## 14. Open questions
+## 14. Remaining work
+
+**Hebrew (Phase 6)** is the only functional gap. It is deferred rather than dropped:
+
+- CLDR 48 carries complete Hebrew annotations — 1966 base and 2376 derived, all with labels.
+- A branch adding `he` upstream to Emojibase is prepared and verified locally: the generator
+  produces 1949 base emoji and 2030 skin variants matching English exactly, with no empty labels.
+- The blocker is `po/he/messages.po`: **120 UI strings** — 10 groups, 101 subgroups, 5 skin tones
+  and 4 labels — that need a Hebrew speaker. Only ~13 can be sourced from CLDR, and both precedent
+  locale PRs upstream shipped 120/120 translated.
+
+If upstream merges, Phase 6 collapses to a version bump and `scripts/generate-cldr-locale.ps1`
+is never needed. If not, that script is the fallback and generalizes to any CLDR locale
+Emojibase omits.
+
+**Before 1.0:** decide the Hebrew route, then tag `v1.0.0` to trigger the release workflow.
+
+---
+
+## 15. Open questions
 
 1. **Facade naming.** `EmojiCatalog` is used throughout rather than `SharpMoji`, because a
    type named `SharpMoji` inside namespace `Oire.SharpMoji` triggers CA1724 and constant
