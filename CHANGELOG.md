@@ -23,6 +23,8 @@ Emoji data updates are additive and do not change the API, so a new Unicode rele
 - `EmojiCatalog`, `Emoji`, `EmojiGroup` and `EmojiLocale`: immutable, per-language emoji data
   with lookup by sequence, hexcode or emoticon, canonical ordering and localized category names.
 - Variation-selector normalization, so an emoji resolves whether or not it carries U+FE0F.
+- `Search`: ranked, diacritic-insensitive search over labels, tags, shortcodes and emoticons,
+  reporting why each result matched so a UI can group or highlight them.
 - Shortcode lookup: `FindByShortcode` and `GetShortcodes` across seven presets, tolerant of the
   colons applications leave attached. English presets only; see the spec for the size trade.
 - Skin-tone lookup: `GetSkinToneSlots`, `GetSkins` and `TryGetSkin` for one tone or two, covering

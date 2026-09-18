@@ -115,6 +115,25 @@ public interface IEmojiCatalog {
     ImmutableArray<Emoji> GetBySubgroup(EmojiSubgroup subgroup);
 
     /// <summary>
+    /// Searches this catalog's labels, tags and shortcodes.
+    /// </summary>
+    /// <param name="query">What the user typed. Case and diacritics are ignored.</param>
+    /// <param name="limit">The most results to return.</param>
+    /// <returns>Matches, best first, or empty for a blank query.</returns>
+    /// <remarks>
+    /// <para>
+    /// Results are ranked by <see cref="MatchKind"/> — an exact shortcode, then an exact name,
+    /// then a name the query starts, and so on — with ties broken by canonical order so the same
+    /// query always returns the same list.
+    /// </para>
+    /// <para>
+    /// Matching ignores case and diacritics, so <c>cafe</c> finds <c>café</c>. A query of several
+    /// words is treated as a name first and, failing that, as terms that must all appear.
+    /// </para>
+    /// </remarks>
+    ImmutableArray<EmojiMatch> Search(string? query, int limit = 25);
+
+    /// <summary>
     /// How many skin-tone modifiers an emoji accepts: none, one, or one per person.
     /// </summary>
     /// <param name="sequence">Any spelling of the emoji, or one of its variants.</param>

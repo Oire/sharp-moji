@@ -28,6 +28,7 @@ public sealed class EmojiCatalog: IEmojiCatalog {
     private readonly FrozenLookup _byEmoticon;
     private readonly ImmutableDictionary<string, ImmutableArray<Emoji>> _byGroup;
     private readonly ImmutableDictionary<string, ImmutableArray<Emoji>> _bySubgroup;
+    private readonly Lazy<SearchIndex> _search;
 
     /// <inheritdoc />
     public EmojiLocale Locale { get; }
@@ -116,6 +117,11 @@ public sealed class EmojiCatalog: IEmojiCatalog {
         _byEmoticon = BuildEmoticonIndex(AllIncludingComponents);
         _byGroup = GroupBy(All, e => e.Group?.Key);
         _bySubgroup = GroupBy(All, e => e.Subgroup?.Key);
+
+        // Folding every label and tag costs a few milliseconds, so it waits until something
+        // actually searches. An application that only renders a grid never pays for it.
+        var searchable = All;
+        _search = new Lazy<SearchIndex>(() => new SearchIndex(searchable));
     }
 
     /// <inheritdoc />
@@ -171,9 +177,23 @@ public sealed class EmojiCatalog: IEmojiCatalog {
         return trimmed.Length == 0 ? null : trimmed;
     }
 
+    /// <summary>
+    /// Removes the "nose" from an emoticon, so <c>:-)</c> finds what <c>:)</c> finds.
+    /// </summary>
+    /// <remarks>
+    /// Upstream carries only the noseless spellings — <c>:)</c>, <c>:D</c>, <c>;P</c> — while
+    /// plenty of people type the nosed form. Verified safe against the full set of 64: none
+    /// contains a hyphen, and stripping hyphens produces no collisions, so this can never turn one
+    /// emoticon into a different one.
+    /// </remarks>
+    private static string RemoveNose(string emoticon) =>
+        emoticon.Contains('-', StringComparison.Ordinal)
+            ? emoticon.Replace("-", string.Empty, StringComparison.Ordinal)
+            : emoticon;
+
     /// <inheritdoc />
     public Emoji? FindByEmoticon(string? emoticon) =>
-        string.IsNullOrWhiteSpace(emoticon) ? null : _byEmoticon.Find(emoticon);
+        string.IsNullOrWhiteSpace(emoticon) ? null : _byEmoticon.Find(RemoveNose(emoticon.Trim()));
 
     /// <inheritdoc />
     public ImmutableArray<Emoji> GetByGroup(EmojiGroup group) {
@@ -187,6 +207,40 @@ public sealed class EmojiCatalog: IEmojiCatalog {
         ArgumentNullException.ThrowIfNull(subgroup);
 
         return _bySubgroup.TryGetValue(subgroup.Key, out var emoji) ? emoji : [];
+    }
+
+    /// <inheritdoc />
+    public ImmutableArray<EmojiMatch> Search(string? query, int limit = 25) {
+        if (string.IsNullOrWhiteSpace(query)) {
+            return [];
+        }
+
+        // A shortcode or an emoticon names one emoji outright, so it heads the list rather than
+        // competing with everything that merely mentions the word. Typing "tada" should give 🎉,
+        // and ":D" should give 😄 - neither is a description to be ranked against others.
+        //
+        // Emoticons are checked first: ":D" and ":-)" are punctuation, so they cannot collide with
+        // a shortcode, and checking them first keeps the intent obvious.
+        var trimmed = query.Trim();
+
+        EmojiMatch? exact =
+            FindByEmoticon(trimmed) is { } byEmoticon
+                ? new EmojiMatch { Emoji = byEmoticon, Kind = MatchKind.Emoticon, MatchedText = trimmed }
+                : FindByShortcode(trimmed) is { } byShortcode
+                    ? new EmojiMatch { Emoji = byShortcode, Kind = MatchKind.Shortcode, MatchedText = trimmed.Trim(':') }
+                    : null;
+
+        if (exact is null) {
+            return _search.Value.Search(query, limit);
+        }
+
+        if (limit == 1) {
+            return [exact];
+        }
+
+        // The text search still runs, so the exact hit heads a full list rather than replacing it:
+        // the user may have meant the word as well as the name.
+        return [exact, .. _search.Value.Search(query, limit - 1).Where(m => m.Emoji != exact.Emoji)];
     }
 
     /// <inheritdoc />

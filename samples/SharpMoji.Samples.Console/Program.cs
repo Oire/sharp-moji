@@ -83,7 +83,25 @@ Console.WriteLine();
 Console.WriteLine("  \":+1:\" resolves to " + english.FindByShortcode(":+1:")?.Sequence);
 Console.WriteLine("  \":tm:\" resolves to " + english.FindByShortcode(":tm:")?.Sequence);
 Console.WriteLine();
-Console.WriteLine("Search arrives in a later phase — see docs/SPEC.md.");
+Console.WriteLine("Search:");
+
+foreach (var query in (string[])["thumbs up", "thum", "love", ":D", ":+1:", "flag turkiye"]) {
+    var hits = english.Search(query, 4);
+    var shown = hits.IsEmpty
+        ? "(nothing)"
+        : string.Join("  ", hits.Select(h => $"{h.Emoji.Sequence}"));
+
+    Console.WriteLine($"  {query,-14} {shown,-22} [{(hits.IsEmpty ? "-" : hits[0].Kind.ToString())}]");
+}
+
+Console.WriteLine();
+Console.WriteLine("The same searches in Ukrainian:");
+
+foreach (var query in (string[])["великі пальці вгору", "серце", ":D"]) {
+    var hits = ukrainian.Search(query, 3);
+
+    Console.WriteLine($"  {query,-22} {string.Join("  ", hits.Select(h => h.Emoji.Sequence))}");
+}
 
 static string Describe(Emoji? emoji) =>
     emoji is null ? "(not found)" : $"{emoji.Sequence}  {emoji.Hexcode,-12} {emoji.Label}";

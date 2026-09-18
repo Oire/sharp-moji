@@ -22,9 +22,10 @@ Working today:
 - Skin-tone lookup, including the 19 emoji that take **two** tone modifiers
 - Trimming- and NativeAOT-compatible, with source-generated JSON
 
+- Ranked search over labels, tags, shortcodes and emoticons, ignoring case and diacritics
+
 Still to come:
 
-- Deterministic, diacritic-insensitive search with specified ranking
 - Hebrew, generated from CLDR
 
 ## Example

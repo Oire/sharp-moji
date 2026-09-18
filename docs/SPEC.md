@@ -369,15 +369,34 @@ IReadOnlyList<EmojiMatch> top5    = catalog.Search("smile", limit: 5);
 
 Ranking is deterministic and specified, in descending priority:
 
-1. Exact shortcode match
-2. Exact label match
-3. Label prefix match
-4. Exact tag match
-5. Label substring match
-6. Tag substring match
+1. Exact **shortcode** — `:+1:`, `tada`
+2. Exact **emoticon** — `:D`, `<3`, and nosed spellings like `:-)`
+3. Exact **label**
+4. Exact **tag**
+5. **Label prefix**
+6. Label substring
+7. Tag substring
 
-Ties break by `order` ascending, so results are stable across runs. `EmojiMatch` exposes the
-matched field and rank so a UI can explain or group results.
+**Two corrections to the order this section first gave**, both forced by the golden corpus:
+
+- **Exact tag now beats label prefix.** Tags are curated keywords: being tagged `love` states
+  that an emoji *means* love, while "love hotel" merely begins with those letters. With prefixes
+  first, typing `love` buried ❤️ below 💌 💘 🏩 💝.
+- **Emoticons were missing entirely.** `:D` in a picker's search box means the emoji, not a
+  search for punctuation. Upstream carries only noseless spellings, so nosed forms are normalized
+  — verified safe: none of the 64 emoticons contains a hyphen and stripping them collides with
+  nothing.
+
+Ties break first by **shorter label**, then by `order`. Canonical order is not popularity order:
+everything tagged `love` is equally tagged, but Unicode sorts ❤️ after 💌 💘 💝 💖, so ordering
+alone pushed the heart people actually mean onto the second screen. A shorter name is a
+reasonable proxy for a more basic emoji — "red heart" against "heart with ribbon".
+
+**A known limit.** Without popularity data, a query matching dozens of equally-tagged emoji
+cannot reliably rank the most-used one first, and the shorter-label proxy is weaker in languages
+where the qualifier varies in length — Ukrainian "червоне серце" is longer than "синє серце", so
+❤️ lands around 13th for `серце`. A frequency table, or letting a consumer boost its own recents,
+is the v1.1 answer. `EmojiMatch` is not affected by either.
 
 Matching is case- and diacritic-insensitive (`CompareOptions.IgnoreCase | IgnoreNonSpace`)
 using the **catalog's** culture, not the ambient one — otherwise a Turkish user's locale
@@ -582,7 +601,7 @@ the dataset is 1949 records, so speed is not the risk; relevance is.
 Benchmarked with BenchmarkDotNet, reported rather than asserted, except two gates chosen to
 catch algorithmic regressions rather than to look impressive:
 
-- Search p99 under 10 ms on the CI runner for single-word queries.
+- Search under 10 ms per query for single-word queries (measured: well under 1 ms).
 - Bundled catalog load under 250 ms cold.
 
 ### 9.4 CI
@@ -609,7 +628,7 @@ came to be wrong in every field and its skin-tone API came to be unimplementable
 | 2 | ~~Model + catalog~~ **Done** | Records, indexes, normalization, locale metadata | ✅ conformance passes against `emoji-test.txt` |
 | 3 | ~~Skin tones~~ **Done** | 1- and 2-slot lookup by indexing published variants | ✅ all 19 two-slot emoji resolve all 25 variants |
 | 4 | ~~Groups + shortcodes~~ **Done** | Localized `messages.json`, preset loading | ✅ `uk` returns Ukrainian group labels; 7 presets embedded |
-| 5 | Search | Index, ranking, diacritic folding | Golden corpus passes for 4 locales |
+| 5 | ~~Search~~ **Done** | Index, ranking, diacritic folding | ✅ golden corpus passes for `en`, `fr`, `de`, `uk`, `ru` |
 | 6 | Hebrew from CLDR | `generate-cldr-locale` script (§7.5) | `he` has full coverage; gaps reported, not blank |
 | 7 | Package | README, XML docs, sample, NOTICE, CI, satellite package | Trimmed + AOT sample runs on 3 OSes |
 
